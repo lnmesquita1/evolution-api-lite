@@ -870,11 +870,15 @@ export class BaileysStartupService extends ChannelStartupService {
 
           if (
             (type !== 'notify' && type !== 'append') ||
-            received.message?.protocolMessage ||
             received.message?.pollUpdateMessage ||
             !received?.message
           ) {
             return;
+          } else if(received.message?.protocolMessage){
+            if(!received.message?.protocolMessage?.editedMessage){
+              this.logger.verbose('message rejected');
+              return;
+            }
           }
 
           if (Long.isLong(received.messageTimestamp)) {
