@@ -41,6 +41,10 @@ export abstract class RouterBroker {
       Object.assign(instance, body);
     }
 
+    if (request.originalUrl.includes('/webhook/meta')) {
+      Object.assign(instance, body);
+    } 
+
     Object.assign(ref, body);
 
     const v = schema ? validate(ref, schema) : { valid: true, errors: [] };

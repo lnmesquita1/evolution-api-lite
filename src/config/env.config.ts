@@ -113,6 +113,7 @@ export type WaBusiness = {
   URL: string;
   VERSION: string;
   LANGUAGE: string;
+  WEBHOOK_TEST: string;
 };
 
 export type EventsWebhook = {
@@ -321,6 +322,7 @@ export class ConfigService {
         URL: process.env.WA_BUSINESS_URL || 'https://graph.facebook.com',
         VERSION: process.env.WA_BUSINESS_VERSION || 'v18.0',
         LANGUAGE: process.env.WA_BUSINESS_LANGUAGE || 'en',
+        WEBHOOK_TEST: process.env.WA_BUSINESS_WEBHOOK_TEST || ''
       },
       LOG: {
         LEVEL:

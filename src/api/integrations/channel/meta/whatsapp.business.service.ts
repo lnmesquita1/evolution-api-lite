@@ -811,26 +811,28 @@ export class BusinessStartupService extends ChannelStartupService {
 
   private async getIdMedia(mediaMessage: any) {
     const formData = new FormData();
-
-    const fileStream = createReadStream(mediaMessage.media);
-
-    formData.append('file', fileStream, { filename: 'media', contentType: mediaMessage.mimetype });
-    formData.append('typeFile', mediaMessage.mimetype);
+    const buffer = Buffer.from(mediaMessage.media, 'base64');
     formData.append('messaging_product', 'whatsapp');
+    formData.append('type', mediaMessage.mimetype);
+    formData.append('file', buffer, { filename: mediaMessage.fileName, contentType: mediaMessage.mimetype });
 
-    // const fileBuffer = await fs.readFile(mediaMessage.media);
+    const headers = { "Content-Type": "multipart/form-data", Authorization: `Bearer ${this.token}` };
+    let urlServer = this.configService.get<WaBusiness>('WA_BUSINESS').URL;
+    const version = this.configService.get<WaBusiness>('WA_BUSINESS').VERSION;
 
-    // const fileBlob = new Blob([fileBuffer], { type: mediaMessage.mimetype });
-    // formData.append('file', fileBlob);
-    // formData.append('typeFile', mediaMessage.mimetype);
-    // formData.append('messaging_product', 'whatsapp');
-
-    const headers = { Authorization: `Bearer ${this.token}` };
-    const res = await axios.post(
-      process.env.API_URL + '/' + process.env.VERSION + '/' + this.number + '/media',
-      formData,
-      { headers },
-    );
+    let res: any;
+    try {
+      res = await axios.post(
+        urlServer + '/' + version + '/' + this.number + '/media',
+        formData,
+        { headers },
+      );
+      
+    } catch (error) {
+      if (error.response) { 
+        this.logger.info(JSON.stringify(error.response.data));
+      }
+    }
     return res.data.id;
   }
 
@@ -866,11 +868,11 @@ export class BusinessStartupService extends ChannelStartupService {
         prepareMedia.type = 'link';
       } else {
         mimetype = mime.getType(mediaMessage.fileName);
+        prepareMedia.mimetype = mimetype;
         const id = await this.getIdMedia(prepareMedia);
         prepareMedia.id = id;
         prepareMedia.type = 'id';
       }
-
       prepareMedia.mimetype = mimetype;
 
       return prepareMedia;
@@ -915,6 +917,7 @@ export class BusinessStartupService extends ChannelStartupService {
       prepareMedia.type = 'link';
     } else {
       mimetype = mime.getType(prepareMedia.fileName);
+      prepareMedia.mimetype = mimetype;
       const id = await this.getIdMedia(prepareMedia);
       prepareMedia.id = id;
       prepareMedia.type = 'id';
@@ -928,12 +931,8 @@ export class BusinessStartupService extends ChannelStartupService {
   public async audioWhatsapp(data: SendAudioDto, file?: any) {
     const mediaData: SendAudioDto = { ...data };
 
-    if (file?.buffer) {
-      mediaData.audio = file.buffer.toString('base64');
-    } else {
-      console.error('File or buffer is undefined.');
-      throw new Error('File or buffer is undefined.');
-    }
+    const audioBuffer = Buffer.from(data.audio, 'base64');
+    mediaData.audio = audioBuffer.toString('base64');
 
     const message = await this.processAudio(mediaData.audio, data.number);
 

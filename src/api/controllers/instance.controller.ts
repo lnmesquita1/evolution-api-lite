@@ -127,7 +127,8 @@ export class InstanceController {
           throw new BadRequestException('number is required');
         }
         const urlServer = this.configService.get<HttpServer>('SERVER').URL;
-        webhookWaBusiness = `${urlServer}/webhook/meta`;
+        const webHookTest = this.configService.get<WaBusiness>('WA_BUSINESS').WEBHOOK_TEST;
+        webhookWaBusiness = `${webHookTest ? webHookTest : urlServer}/webhook/meta`;
         accessTokenWaBusiness = this.configService.get<WaBusiness>('WA_BUSINESS').TOKEN_WEBHOOK;
       }
 
