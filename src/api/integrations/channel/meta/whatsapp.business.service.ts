@@ -450,6 +450,8 @@ export class BusinessStartupService extends ChannelStartupService {
               return;
             }
 
+            if (item.status === 'read' && key.fromMe) return;
+
             if (item.message === null && item.status === undefined) {
               this.sendDataWebhook(Events.MESSAGES_DELETE, key);
 
