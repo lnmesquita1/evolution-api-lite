@@ -846,6 +846,18 @@ export class BaileysStartupService extends ChannelStartupService {
               message: received,
               retry: 0,
             });
+
+            const messageRaw = this.prepareMessage(received);
+            this.logger.verbose('Sending data ciphertext to webhook in event MESSAGES_UPSERT');
+            this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
+
+            this.logger.verbose('Inserting ciphertext in database');
+            if (this.configService.get<Database>('DATABASE').SAVE_DATA.NEW_MESSAGE) {
+              await this.prismaRepository.message.create({
+                data: messageRaw,
+              });
+            }
+
             continue;
           }
 
