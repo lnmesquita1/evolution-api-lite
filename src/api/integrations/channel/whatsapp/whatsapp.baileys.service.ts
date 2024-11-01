@@ -940,7 +940,7 @@ export class BaileysStartupService extends ChannelStartupService {
                 update: contactRaw,
               });
 
-            return;
+            continue;
           }
 
           this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
