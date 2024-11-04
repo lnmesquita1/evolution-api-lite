@@ -442,6 +442,18 @@ export class BaileysStartupService extends ChannelStartupService {
       log = `Baileys version: ${version}`;
     }
 
+    const integrationData = await this.prismaRepository.instance.findUnique({
+      where: { id: this.instance.id },
+      select: {
+        webVersion: true,
+      },
+    });
+    const webVersion = integrationData.webVersion 
+        ? integrationData.webVersion.split('.').map(Number) 
+        : version
+
+        this.logger.info(`WhatsApp webVersion: ${webVersion}`);
+
     this.logger.info(log);
 
     this.logger.info(`Group Ignore: ${this.localSettings.groupsIgnore}`);
@@ -487,7 +499,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
     const socketConfig: UserFacingSocketConfig = {
       ...options,
-      version,
+      version: webVersion,
       logger: P({ level: this.logBaileys }),
       printQRInTerminal: false,
       auth: {
