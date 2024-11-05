@@ -520,10 +520,10 @@ export class BaileysStartupService extends ChannelStartupService {
       emitOwnEvents: false,
       shouldIgnoreJid: (jid) => {
         const isGroupJid = this.localSettings.groupsIgnore && isJidGroup(jid);
-        const isBroadcast = !this.localSettings.readStatus && isJidBroadcast(jid);
+       //const isBroadcast = !this.localSettings.readStatus && isJidBroadcast(jid);
         const isNewsletter = isJidNewsletter(jid);
 
-        return isGroupJid || isBroadcast || isNewsletter;
+        return isGroupJid || isNewsletter;
       },
       syncFullHistory: this.localSettings.syncFullHistory,
       cachedGroupMetadata: this.getGroupMetadataCache,
@@ -828,6 +828,8 @@ export class BaileysStartupService extends ChannelStartupService {
     ) => {
       try {
         for (const received of messages) {
+
+          console.log("MESSAGES DO UPSERT:: " + JSON.stringify(received))
           // if (received.message?.conversation || received.message?.extendedTextMessage?.text) {
           //   const text = received.message?.conversation || received.message?.extendedTextMessage?.text;
           //   if (text == 'requestPlaceholder' && !requestId) {
@@ -859,16 +861,19 @@ export class BaileysStartupService extends ChannelStartupService {
               retry: 0,
             });
 
-            const messageRaw = this.prepareMessage(received);
+            const messageRaw = {
+              key: received.key,
+              pushName: received.pushName,
+              messageType: 'ciphertext',
+              message: {},
+              messageTimestamp: received.messageTimestamp as number,
+              owner: this.instance.name,
+              instanceId: this.instanceId,
+              source: getDevice(received.key.id),
+            };
+
             this.logger.verbose('Sending data ciphertext to webhook in event MESSAGES_UPSERT');
             this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
-
-            this.logger.verbose('Inserting ciphertext in database');
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.NEW_MESSAGE) {
-              await this.prismaRepository.message.create({
-                data: messageRaw,
-              });
-            }
 
             continue;
           }
@@ -3098,7 +3103,7 @@ export class BaileysStartupService extends ChannelStartupService {
       messageType: contentType || 'unknown',
       messageTimestamp: message.messageTimestamp as number,
       instanceId: this.instanceId,
-      source: getDevice(message.key.id),
+      source: getDevice(message.key.id), 
     };
 
     if (messageRaw.message.extendedTextMessage) {
