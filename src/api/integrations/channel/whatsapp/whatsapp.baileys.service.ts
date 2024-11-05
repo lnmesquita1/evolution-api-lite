@@ -2525,7 +2525,7 @@ export class BaileysStartupService extends ChannelStartupService {
       await this.client.updateStatusPrivacy(settings.status);
       await this.client.updateOnlinePrivacy(settings.online);
       await this.client.updateLastSeenPrivacy(settings.last);
-      await this.client.updateGroupsAddPrivacy(settings.groupadd);
+      await this.client.updateGroupsAddPrivacy(settings.groupadd === 'none' ? 'all' : settings.groupadd);
 
       this.reloadConnection();
 
