@@ -829,7 +829,6 @@ export class BaileysStartupService extends ChannelStartupService {
       try {
         for (const received of messages) {
 
-          console.log("MESSAGES DO UPSERT:: " + JSON.stringify(received))
           // if (received.message?.conversation || received.message?.extendedTextMessage?.text) {
           //   const text = received.message?.conversation || received.message?.extendedTextMessage?.text;
           //   if (text == 'requestPlaceholder' && !requestId) {
