@@ -907,13 +907,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           const messageRaw = this.prepareMessage(received);
 
-          const isMedia =
-            received?.message?.imageMessage ||
-            received?.message?.videoMessage ||
-            received?.message?.stickerMessage ||
-            received?.message?.documentMessage ||
-            received?.message?.documentWithCaptionMessage ||
-            received?.message?.audioMessage;
+          const isMedia = this.isMedia(received.message);
 
           if (this.localSettings.readMessages && received.key.id !== 'status@broadcast') {
             await this.client.readMessages([received.key]);
@@ -2502,6 +2496,45 @@ export class BaileysStartupService extends ChannelStartupService {
       this.logger.error(error);
       throw new BadRequestException(error.toString());
     }
+  }
+
+  public isMedia = (message: proto.IMessage): boolean => {
+    type MediaTypes = 'audioMessage' | 'imageMessage' | 'videoMessage' | 'documentMessage' | 'stickerMessage';
+    const mediaTypes: MediaTypes[] = [
+      'audioMessage',
+      'imageMessage',
+      'videoMessage',
+      'documentMessage',
+      'stickerMessage',
+    ];
+  
+    for (const type of mediaTypes) {
+      if (message[type]) {
+        return true;
+      }
+    }
+  
+    const nestedPaths = [
+      message.ephemeralMessage?.message,
+      message.ephemeralMessage?.message?.viewOnceMessage?.message,
+      message.ephemeralMessage?.message?.viewOnceMessageV2?.message,
+      message.viewOnceMessage?.message,
+      message.viewOnceMessageV2?.message,
+      message.extendedTextMessage?.contextInfo?.quotedMessage,
+      message.documentWithCaptionMessage?.message,
+    ];
+  
+    for (const nested of nestedPaths) {
+      if (nested) {
+        for (const type of mediaTypes) {
+          if (nested[type]) {
+            return true;
+          }
+        }
+      }
+    }
+  
+    return false;
   }
 
   public async fetchPrivacySettings() {
