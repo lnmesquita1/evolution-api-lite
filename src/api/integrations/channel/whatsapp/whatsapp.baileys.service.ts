@@ -886,15 +886,11 @@ export class BaileysStartupService extends ChannelStartupService {
 
           if (
             (type !== 'notify' && type !== 'append') ||
+            received.message?.protocolMessage ||
             received.message?.pollUpdateMessage ||
             !received?.message
           ) {
             return;
-          } else if(received.message?.protocolMessage){
-            if(!received.message?.protocolMessage?.editedMessage){
-              this.logger.verbose('message rejected');
-              return;
-            }
           }
 
           if (Long.isLong(received.messageTimestamp)) {
@@ -2520,7 +2516,6 @@ export class BaileysStartupService extends ChannelStartupService {
       message.ephemeralMessage?.message?.viewOnceMessageV2?.message,
       message.viewOnceMessage?.message,
       message.viewOnceMessageV2?.message,
-      message.extendedTextMessage?.contextInfo?.quotedMessage,
       message.documentWithCaptionMessage?.message,
     ];
   
