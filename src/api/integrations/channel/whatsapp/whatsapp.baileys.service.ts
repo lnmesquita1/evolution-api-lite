@@ -2085,7 +2085,7 @@ export class BaileysStartupService extends ChannelStartupService {
         ptt: true,
         mimetype: 'audio/ogg; codecs=opus',
       },
-      { presence: 'recording', delay: data?.delay },
+      { presence: 'recording', delay: data?.delay, quoted: data?.quoted },
     );
   }
 
