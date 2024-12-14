@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.20 AS builder
 
 RUN apk add git wget curl bash
 
@@ -21,7 +21,7 @@ RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/* && \
     ./Docker/scripts/generate_database.sh && \
     npm run build
 
-FROM node:20-alpine AS final
+FROM node:20-alpine3.20 AS final
 
 RUN apk add git wget curl bash
 
