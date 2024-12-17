@@ -852,6 +852,16 @@ export class BaileysStartupService extends ChannelStartupService {
             }
           }
 
+          let groupInfo;
+          const { remoteJid } = received.key;
+          if (isJidGroup(remoteJid)) {
+            const groupMetaData = await this.getGroupMetadataCache(remoteJid);
+            groupInfo = {
+              id: groupMetaData.id,
+              subject: groupMetaData.subject
+            }
+          }
+
           if (received.messageStubParameters && received.messageStubParameters[0] === 'Message absent from node') {
             this.logger.info(`Recovering message lost messageId: ${received.key.id}`);
 
@@ -869,6 +879,7 @@ export class BaileysStartupService extends ChannelStartupService {
               owner: this.instance.name,
               instanceId: this.instanceId,
               source: getDevice(received.key.id),
+              groupInfo
             };
 
             this.logger.verbose('Sending data ciphertext to webhook in event MESSAGES_UPSERT');
@@ -947,6 +958,7 @@ export class BaileysStartupService extends ChannelStartupService {
             messageRaw.message.base64 = buffer ? buffer.toString('base64') : undefined;
           }
 
+          messageRaw.groupInfo = groupInfo;
           this.logger.log(messageRaw);
 
           this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
@@ -1675,6 +1687,17 @@ export class BaileysStartupService extends ChannelStartupService {
         messageRaw.message.base64 = buffer ? buffer.toString('base64') : undefined;
       }
 
+      let groupInfo;
+      const { remoteJid } = messageSent.key;
+      if (isJidGroup(remoteJid)) {
+        const groupMetaData = await this.getGroupMetadataCache(remoteJid);
+        groupInfo = {
+          id: groupMetaData.id,
+          subject: groupMetaData.subject
+        }
+      }
+
+      messageRaw.groupInfo = groupInfo;
       this.logger.log(messageRaw);
 
       this.sendDataWebhook(Events.SEND_MESSAGE, messageRaw);
