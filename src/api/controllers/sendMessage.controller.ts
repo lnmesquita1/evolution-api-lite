@@ -47,14 +47,6 @@ export class SendMessageController {
   }
 
   public async sendWhatsAppAudio({ instanceName }: InstanceDto, data: SendAudioDto, file?: any) {
-    if (typeof data.quoted === 'string') {
-      try {
-        data.quoted = JSON.parse(data.quoted);
-      } catch (error) {
-        console.error('Failed to parse quoted field:', error);
-        throw new BadRequestException('Invalid quoted format');
-      }
-    }
     if (file?.buffer || isURL(data.audio) || isBase64(data.audio)) {
       return await this.waMonitor.waInstances[instanceName].audioWhatsapp(data, file);
     } else {

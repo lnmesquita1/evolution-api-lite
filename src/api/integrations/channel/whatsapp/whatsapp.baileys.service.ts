@@ -33,6 +33,7 @@ import {
   ContactMessage,
   MediaMessage,
   Options,
+  Quoted,
   SendAudioDto,
   SendContactDto,
   SendLocationDto,
@@ -2069,6 +2070,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async mediaMessage(data: SendMediaDto, file?: any) {
     const mediaData: SendMediaDto = { ...data };
+    data.quoted = this.parseQuoted(data.quoted);
 
     if (file) mediaData.media = file.buffer.toString('base64');
 
@@ -2089,6 +2091,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async audioWhatsapp(data: SendAudioDto, file?: any) {
     const mediaData: SendAudioDto = { ...data };
+    data.quoted = this.parseQuoted(data.quoted);
 
     if (file?.buffer) {
       mediaData.audio = file.buffer.toString('base64');
@@ -3152,6 +3155,18 @@ export class BaileysStartupService extends ChannelStartupService {
   }
   public async templateMessage() {
     throw new Error('Method not available in the Baileys service');
+  }
+
+  private parseQuoted = (quoted: Quoted) => {
+    if (typeof quoted === 'string') {
+      try {
+        return JSON.parse(quoted);
+      } catch (error) {
+        console.error('Failed to parse quoted field:', error);
+        throw new BadRequestException('Invalid quoted format');
+      }
+    }
+    return quoted;
   }
 
   private prepareMessage(message: proto.IWebMessageInfo): any {
