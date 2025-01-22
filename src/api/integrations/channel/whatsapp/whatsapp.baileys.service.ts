@@ -745,36 +745,6 @@ export class BaileysStartupService extends ChannelStartupService {
           `recv ${chats.length} chats, ${contacts.length} contacts, ${messages.length} msgs (is latest: ${isLatest}, progress: ${progress}%), type: ${syncType}`,
         );
 
-        const chatsRaw: { remoteJid: string; instanceId: string; name?: string }[] = [];
-        const chatsRepository = new Set(
-          (
-            await this.prismaRepository.chat.findMany({
-              where: { instanceId: this.instanceId },
-            })
-          ).map((chat) => chat.remoteJid),
-        );
-
-        for (const chat of chats) {
-          if (chatsRepository?.has(chat.id)) {
-            continue;
-          }
-
-          chatsRaw.push({
-            remoteJid: chat.id,
-            instanceId: this.instanceId,
-            name: chat.name,
-          });
-        }
-
-        this.sendDataWebhook(Events.CHATS_SET, chatsRaw);
-
-        if (this.configService.get<Database>('DATABASE').SAVE_DATA.HISTORIC) {
-          await this.prismaRepository.chat.createMany({
-            data: chatsRaw,
-            skipDuplicates: true,
-          });
-        }
-
         const messagesRaw: any[] = [];
 
         for (const m of messages) {
@@ -788,24 +758,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           messagesRaw.push(this.prepareMessage(m));
         }
-
         this.sendDataWebhook(Events.MESSAGES_SET, [...messagesRaw]);
-
-        if (this.configService.get<Database>('DATABASE').SAVE_DATA.HISTORIC) {
-          await this.prismaRepository.message.createMany({
-            data: messagesRaw,
-            skipDuplicates: true,
-          });
-        }
-
-        await this.contactHandle['contacts.upsert'](
-          contacts
-            .filter((c) => !!c.notify || !!c.name)
-            .map((c) => ({
-              id: c.id,
-              name: c.name ?? c.notify,
-            })),
-        );
 
         contacts = undefined;
         messages = undefined;
