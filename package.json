@@ -1,6 +1,6 @@
 {
   "name": "evolution-api-lite",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "Rest api for communication with WhatsApp",
   "main": "./dist/main.js",
   "type": "commonjs",
