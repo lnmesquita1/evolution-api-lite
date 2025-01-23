@@ -1512,7 +1512,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
     const sender = isWA.jid.toLowerCase();
 
-    this.logger.verbose(`Sending message to ${sender}`);
+    this.logger.log(`Sending message to ${sender}`);
 
     try {
       if (options?.delay) {

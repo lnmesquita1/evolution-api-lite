@@ -666,6 +666,7 @@ export class BusinessStartupService extends ChannelStartupService {
               [message['type']]: message['id'],
               preview_url: linkPreview,
               caption: message['caption'],
+              ...(message['mediaType'] === "document" && {filename: message.fileName}),
             },
           };
           quoted ? (content.context = { message_id: quoted.id }) : content;
@@ -815,7 +816,7 @@ export class BusinessStartupService extends ChannelStartupService {
 
   private async getIdMedia(mediaMessage: any) {
     const formData = new FormData();
-    const buffer = Buffer.from(mediaMessage.media, 'base64');
+    const buffer = mediaMessage.media;
     formData.append('messaging_product', 'whatsapp');
     formData.append('type', mediaMessage.mimetype);
     formData.append('file', buffer, { filename: mediaMessage.fileName, contentType: mediaMessage.mimetype });
@@ -886,7 +887,8 @@ export class BusinessStartupService extends ChannelStartupService {
     }
   }
 
-  public async mediaMessage(data: SendMediaDto) {
+  public async mediaMessage(data: SendMediaDto, file?: any) {
+    if (file) data.media = file.buffer;
     const message = await this.prepareMediaMessage(data);
 
     return await this.sendMessageWithTyping(
@@ -910,7 +912,7 @@ export class BusinessStartupService extends ChannelStartupService {
     let mimetype: string;
 
     const prepareMedia: any = {
-      fileName: `${hash}.mp3`,
+      fileName: `${hash}.ogg`,
       mediaType: 'audio',
       media: audio,
     };
@@ -935,8 +937,12 @@ export class BusinessStartupService extends ChannelStartupService {
   public async audioWhatsapp(data: SendAudioDto, file?: any) {
     const mediaData: SendAudioDto = { ...data };
 
-    const audioBuffer = Buffer.from(data.audio, 'base64');
-    mediaData.audio = audioBuffer.toString('base64');
+    if (file?.buffer) {
+      mediaData.audio = file.buffer;
+    } else {
+      console.error('File or buffer is undefined.');
+      throw new Error('File or buffer is undefined.');
+    }
 
     const message = await this.processAudio(mediaData.audio, data.number);
 
