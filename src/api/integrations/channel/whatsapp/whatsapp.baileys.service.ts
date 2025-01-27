@@ -706,6 +706,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   private readonly contactHandle = {
     'contacts.upsert': async (contacts: Contact[]) => {
+      this.logger.info('contacts.upsert: ' + JSON.stringify(contacts));
       try {
         const contactsRaw: any = contacts.map((contact) => ({
           remoteJid: contact.id,
@@ -771,6 +772,7 @@ export class BaileysStartupService extends ChannelStartupService {
         profilePicUrl?: string;
         instanceId: string;
       }[] = [];
+      this.logger.info('contacts.update: ' + JSON.stringify(contacts));
       for await (const contact of contacts) {
         contactsRaw.push({
           remoteJid: contact.id,
@@ -1446,42 +1448,42 @@ export class BaileysStartupService extends ChannelStartupService {
           }
         }
 
-        if (events['chats.upsert']) {
-          const payload = events['chats.upsert'];
-          this.chatHandle['chats.upsert'](payload);
-        }
+        // if (events['chats.upsert']) {
+        //   const payload = events['chats.upsert'];
+        //   this.chatHandle['chats.upsert'](payload);
+        // }
 
-        if (events['chats.update']) {
-          const payload = events['chats.update'];
-          this.chatHandle['chats.update'](payload);
-        }
+        // if (events['chats.update']) {
+        //   const payload = events['chats.update'];
+        //   this.chatHandle['chats.update'](payload);
+        // }
 
-        if (events['chats.delete']) {
-          const payload = events['chats.delete'];
-          this.chatHandle['chats.delete'](payload);
-        }
+        // if (events['chats.delete']) {
+        //   const payload = events['chats.delete'];
+        //   this.chatHandle['chats.delete'](payload);
+        // }
 
-        if (events['contacts.upsert']) {
-          const payload = events['contacts.upsert'];
-          this.contactHandle['contacts.upsert'](payload);
-        }
+        // if (events['contacts.upsert']) {
+        //   const payload = events['contacts.upsert'];
+        //   this.contactHandle['contacts.upsert'](payload);
+        // }
 
-        if (events['contacts.update']) {
-          const payload = events['contacts.update'];
-          this.contactHandle['contacts.update'](payload);
-        }
+        // if (events['contacts.update']) {
+        //   const payload = events['contacts.update'];
+        //   this.contactHandle['contacts.update'](payload);
+        // }
 
-        if (events[Events.LABELS_ASSOCIATION]) {
-          const payload = events[Events.LABELS_ASSOCIATION];
-          this.labelHandle[Events.LABELS_ASSOCIATION](payload, database);
-          return;
-        }
+        // if (events[Events.LABELS_ASSOCIATION]) {
+        //   const payload = events[Events.LABELS_ASSOCIATION];
+        //   this.labelHandle[Events.LABELS_ASSOCIATION](payload, database);
+        //   return;
+        // }
 
-        if (events[Events.LABELS_EDIT]) {
-          const payload = events[Events.LABELS_EDIT];
-          this.labelHandle[Events.LABELS_EDIT](payload);
-          return;
-        }
+        // if (events[Events.LABELS_EDIT]) {
+        //   const payload = events[Events.LABELS_EDIT];
+        //   this.labelHandle[Events.LABELS_EDIT](payload);
+        //   return;
+        // }
       }
     });
   }
