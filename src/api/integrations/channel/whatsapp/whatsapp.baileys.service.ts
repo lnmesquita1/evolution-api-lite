@@ -706,7 +706,6 @@ export class BaileysStartupService extends ChannelStartupService {
 
   private readonly contactHandle = {
     'contacts.upsert': async (contacts: Contact[]) => {
-      this.logger.info('contacts.upsert: ' + JSON.stringify(contacts));
       try {
         const contactsRaw: any = contacts.map((contact) => ({
           remoteJid: contact.id,
@@ -772,7 +771,6 @@ export class BaileysStartupService extends ChannelStartupService {
         profilePicUrl?: string;
         instanceId: string;
       }[] = [];
-      this.logger.info('contacts.update: ' + JSON.stringify(contacts));
       for await (const contact of contacts) {
         contactsRaw.push({
           remoteJid: contact.id,
