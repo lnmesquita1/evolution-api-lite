@@ -35,7 +35,7 @@ export class GroupController {
   }
 
   public async findGroupInfo(instance: InstanceDto, groupJid: GroupJid) {
-    return await this.waMonitor.waInstances[instance.instanceName].findGroup(groupJid);
+    return await this.waMonitor.waInstances[instance.instanceName].getGroupMetadataCache(groupJid.groupJid);
   }
 
   public async fetchAllGroups(instance: InstanceDto, getPaticipants: GetParticipant) {
