@@ -729,35 +729,35 @@ export class BaileysStartupService extends ChannelStartupService {
           }
         }
 
-        const updatedContacts = await Promise.all(
-          contacts.map(async (contact) => ({
-            remoteJid: contact.id,
-            pushName: contact?.name || contact?.verifiedName || contact.id.split('@')[0],
-            profilePicUrl: (await this.profilePicture(contact.id)).profilePictureUrl,
-            instanceId: this.instanceId,
-          })),
-        );
+        // const updatedContacts = await Promise.all(
+        //   contacts.map(async (contact) => ({
+        //     remoteJid: contact.id,
+        //     pushName: contact?.name || contact?.verifiedName || contact.id.split('@')[0],
+        //     profilePicUrl: (await this.profilePicture(contact.id)).profilePictureUrl,
+        //     instanceId: this.instanceId,
+        //   })),
+        // );
 
-        if (updatedContacts.length > 0) {
-          const usersContacts = updatedContacts.filter((c) => c.remoteJid.includes('@s.whatsapp'));
-          if (usersContacts) {
-            await saveOnWhatsappCache(usersContacts.map((c) => ({ remoteJid: c.remoteJid })));
-          }
+        // if (updatedContacts.length > 0) {
+        //   const usersContacts = updatedContacts.filter((c) => c.remoteJid.includes('@s.whatsapp'));
+        //   if (usersContacts) {
+        //     await saveOnWhatsappCache(usersContacts.map((c) => ({ remoteJid: c.remoteJid })));
+        //   }
 
-          this.sendDataWebhook(Events.CONTACTS_UPDATE, updatedContacts);
-          await Promise.all(
-            updatedContacts.map(async (contact) => {
-              const update = this.prismaRepository.contact.updateMany({
-                where: { remoteJid: contact.remoteJid, instanceId: this.instanceId },
-                data: {
-                  profilePicUrl: contact.profilePicUrl,
-                },
-              });
+        //   this.sendDataWebhook(Events.CONTACTS_UPDATE, updatedContacts);
+        //   await Promise.all(
+        //     updatedContacts.map(async (contact) => {
+        //       const update = this.prismaRepository.contact.updateMany({
+        //         where: { remoteJid: contact.remoteJid, instanceId: this.instanceId },
+        //         data: {
+        //           profilePicUrl: contact.profilePicUrl,
+        //         },
+        //       });
 
-              return update;
-            }),
-          );
-        }
+        //       return update;
+        //     }),
+        //   );
+        // }
       } catch (error) {
         console.error(error);
         this.logger.error(`Error: ${error.message}`);
@@ -836,6 +836,15 @@ export class BaileysStartupService extends ChannelStartupService {
           messagesRaw.push(this.prepareMessage(m));
         }
         this.sendDataWebhook(Events.MESSAGES_SET, [...messagesRaw]);
+
+        await this.contactHandle['contacts.upsert'](
+          contacts
+            .filter((c) => !!c.notify || !!c.name)
+            .map((c) => ({
+              id: c.id,
+              name: c.name ?? c.notify,
+            })),
+        );
 
         contacts = undefined;
         messages = undefined;
