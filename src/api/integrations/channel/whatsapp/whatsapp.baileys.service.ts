@@ -951,29 +951,29 @@ export class BaileysStartupService extends ChannelStartupService {
           if (settings?.groupsIgnore && received.key.remoteJid.includes('@g.us')) {
             continue;
           }
-          const existingChat = await this.prismaRepository.chat.findFirst({
-            where: { instanceId: this.instanceId, remoteJid: received.key.remoteJid },
-            select: { id: true, name: true },
-          });
+          // const existingChat = await this.prismaRepository.chat.findFirst({
+          //   where: { instanceId: this.instanceId, remoteJid: received.key.remoteJid },
+          //   select: { id: true, name: true },
+          // });
 
-          if (
-            existingChat &&
-            received.pushName &&
-            existingChat.name !== received.pushName &&
-            received.pushName.trim().length > 0
-          ) {
-            this.sendDataWebhook(Events.CHATS_UPSERT, [{ ...existingChat, name: received.pushName }]);
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.CHATS) {
-              try {
-                await this.prismaRepository.chat.update({
-                  where: { id: existingChat.id },
-                  data: { name: received.pushName },
-                });
-              } catch (error) {
-                console.log(`Chat insert record ignored: ${received.key.remoteJid} - ${this.instanceId}`);
-              }
-            }
-          }
+          // if (
+          //   existingChat &&
+          //   received.pushName &&
+          //   existingChat.name !== received.pushName &&
+          //   received.pushName.trim().length > 0
+          // ) {
+          //   this.sendDataWebhook(Events.CHATS_UPSERT, [{ ...existingChat, name: received.pushName }]);
+          //   if (this.configService.get<Database>('DATABASE').SAVE_DATA.CHATS) {
+          //     try {
+          //       await this.prismaRepository.chat.update({
+          //         where: { id: existingChat.id },
+          //         data: { name: received.pushName },
+          //       });
+          //     } catch (error) {
+          //       console.log(`Chat insert record ignored: ${received.key.remoteJid} - ${this.instanceId}`);
+          //     }
+          //   }
+          // }
 
           // Resposta de texto em algum status
           if (received.message?.extendedTextMessage?.contextInfo?.remoteJid === 'status@broadcast' &&
@@ -1006,64 +1006,64 @@ export class BaileysStartupService extends ChannelStartupService {
               data: messageRaw,
             });
 
-            if (received.key.fromMe === false) {
-              if (msg.status === status[3]) {
-                this.logger.log(`Update not read messages ${received.key.remoteJid}`);
+            // if (received.key.fromMe === false) {
+            //   if (msg.status === status[3]) {
+            //     this.logger.log(`Update not read messages ${received.key.remoteJid}`);
 
-                await this.updateChatUnreadMessages(received.key.remoteJid);
-              } else if (msg.status === status[4]) {
-                this.logger.log(`Update readed messages ${received.key.remoteJid} - ${msg.messageTimestamp}`);
+            //     await this.updateChatUnreadMessages(received.key.remoteJid);
+            //   } else if (msg.status === status[4]) {
+            //     this.logger.log(`Update readed messages ${received.key.remoteJid} - ${msg.messageTimestamp}`);
 
-                await this.updateMessagesReadedByTimestamp(received.key.remoteJid, msg.messageTimestamp);
-              }
-            } else {
-              // is send message by me
-              this.logger.log(`Update readed messages ${received.key.remoteJid} - ${msg.messageTimestamp}`);
+            //     await this.updateMessagesReadedByTimestamp(received.key.remoteJid, msg.messageTimestamp);
+            //   }
+            // } else {
+            //   // is send message by me
+            //   this.logger.log(`Update readed messages ${received.key.remoteJid} - ${msg.messageTimestamp}`);
 
-              await this.updateMessagesReadedByTimestamp(received.key.remoteJid, msg.messageTimestamp);
-            }
+            //   await this.updateMessagesReadedByTimestamp(received.key.remoteJid, msg.messageTimestamp);
+            // }
 
-            if (isMedia) {
-              if (this.configService.get<S3>('S3').ENABLE) {
-                try {
-                  const message: any = received;
-                  const media = await this.getBase64FromMediaMessage(
-                    {
-                      message,
-                    },
-                    true,
-                  );
+            // if (isMedia) {
+            //   if (this.configService.get<S3>('S3').ENABLE) {
+            //     try {
+            //       const message: any = received;
+            //       const media = await this.getBase64FromMediaMessage(
+            //         {
+            //           message,
+            //         },
+            //         true,
+            //       );
 
-                  const { buffer, mediaType, fileName, size } = media;
-                  const mimetype = mimeTypes.lookup(fileName).toString();
-                  const fullName = join(`${this.instance.id}`, received.key.remoteJid, mediaType, fileName);
-                  await s3Service.uploadFile(fullName, buffer, size.fileLength?.low, {
-                    'Content-Type': mimetype,
-                  });
+            //       const { buffer, mediaType, fileName, size } = media;
+            //       const mimetype = mimeTypes.lookup(fileName).toString();
+            //       const fullName = join(`${this.instance.id}`, received.key.remoteJid, mediaType, fileName);
+            //       await s3Service.uploadFile(fullName, buffer, size.fileLength?.low, {
+            //         'Content-Type': mimetype,
+            //       });
 
-                  await this.prismaRepository.media.create({
-                    data: {
-                      messageId: msg.id,
-                      instanceId: this.instanceId,
-                      type: mediaType,
-                      fileName: fullName,
-                      mimetype,
-                    },
-                  });
+            //       await this.prismaRepository.media.create({
+            //         data: {
+            //           messageId: msg.id,
+            //           instanceId: this.instanceId,
+            //           type: mediaType,
+            //           fileName: fullName,
+            //           mimetype,
+            //         },
+            //       });
 
-                  const mediaUrl = await s3Service.getObjectUrl(fullName);
+            //       const mediaUrl = await s3Service.getObjectUrl(fullName);
 
-                  messageRaw.message.mediaUrl = mediaUrl;
+            //       messageRaw.message.mediaUrl = mediaUrl;
 
-                  await this.prismaRepository.message.update({
-                    where: { id: msg.id },
-                    data: messageRaw,
-                  });
-                } catch (error) {
-                  this.logger.error(['Error on upload file to minio', error?.message, error?.stack]);
-                }
-              }
-            }
+            //       await this.prismaRepository.message.update({
+            //         where: { id: msg.id },
+            //         data: messageRaw,
+            //       });
+            //     } catch (error) {
+            //       this.logger.error(['Error on upload file to minio', error?.message, error?.stack]);
+            //     }
+            //   }
+            // }
           }
 
           if (this.localWebhook.enabled) {
@@ -1145,7 +1145,7 @@ export class BaileysStartupService extends ChannelStartupService {
     'messages.update': async (args: WAMessageUpdate[], settings: any) => {
       this.logger.log(`Update messages ${JSON.stringify(args, undefined, 2)}`);
 
-      const readChatToUpdate: Record<string, true> = {}; // {remoteJid: true}
+      //const readChatToUpdate: Record<string, true> = {}; // {remoteJid: true}
 
       for await (const { key, update } of args) {
         if (settings?.groupsIgnore && key.remoteJid?.includes('@g.us')) {
@@ -1166,57 +1166,57 @@ export class BaileysStartupService extends ChannelStartupService {
             }
           }
 
-          const findMessage = await this.prismaRepository.message.findFirst({
-            where: {
-              instanceId: this.instanceId,
-              key: {
-                path: ['id'],
-                equals: key.id,
-              },
-            },
-          });
+          // const findMessage = await this.prismaRepository.message.findFirst({
+          //   where: {
+          //     instanceId: this.instanceId,
+          //     key: {
+          //       path: ['id'],
+          //       equals: key.id,
+          //     },
+          //   },
+          // });
 
-          if (!findMessage) {
-            continue;
-          }
+          // if (!findMessage) {
+          //   continue;
+          // }
 
           if (update.message === null && update.status === undefined) {
             this.sendDataWebhook(Events.MESSAGES_DELETE, key);
 
-            const message: any = {
-              messageId: findMessage.id,
-              keyId: key.id,
-              remoteJid: key.remoteJid,
-              fromMe: key.fromMe,
-              participant: key?.remoteJid,
-              status: 'DELETED',
-              instanceId: this.instanceId,
-            };
+            // const message: any = {
+            //   messageId: findMessage.id,
+            //   keyId: key.id,
+            //   remoteJid: key.remoteJid,
+            //   fromMe: key.fromMe,
+            //   participant: key?.remoteJid,
+            //   status: 'DELETED',
+            //   instanceId: this.instanceId,
+            // };
 
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE)
-              await this.prismaRepository.messageUpdate.create({
-                data: message,
-              });
+            // if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE)
+            //   await this.prismaRepository.messageUpdate.create({
+            //     data: message,
+            //   });
 
             continue;
-          } else if (update.status !== undefined && status[update.status] !== findMessage.status) {
-            if (!key.fromMe && key.remoteJid) {
-              readChatToUpdate[key.remoteJid] = true;
+          } //else if (update.status !== undefined && status[update.status] !== findMessage.status) {
+            // if (!key.fromMe && key.remoteJid) {
+            //   readChatToUpdate[key.remoteJid] = true;
 
-              if (status[update.status] === status[4]) {
-                this.logger.log(`Update as read ${key.remoteJid} - ${findMessage.messageTimestamp}`);
-                this.updateMessagesReadedByTimestamp(key.remoteJid, findMessage.messageTimestamp);
-              }
-            }
+            //   if (status[update.status] === status[4]) {
+            //     this.logger.log(`Update as read ${key.remoteJid} - ${findMessage.messageTimestamp}`);
+            //     this.updateMessagesReadedByTimestamp(key.remoteJid, findMessage.messageTimestamp);
+            //   }
+            // }
 
-            await this.prismaRepository.message.update({
-              where: { id: findMessage.id },
-              data: { status: status[update.status] },
-            });
-          }
+            // await this.prismaRepository.message.update({
+            //   where: { id: findMessage.id },
+            //   data: { status: status[update.status] },
+            // });
+          //}
 
           const message: any = {
-            messageId: findMessage.id,
+            messageId: key.id,
             keyId: key.id,
             remoteJid: key.remoteJid,
             fromMe: key.fromMe,
@@ -1228,41 +1228,41 @@ export class BaileysStartupService extends ChannelStartupService {
 
           this.sendDataWebhook(Events.MESSAGES_UPDATE, message);
 
-          if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE)
-            await this.prismaRepository.messageUpdate.create({
-              data: message,
-            });
+          // if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE)
+          //   await this.prismaRepository.messageUpdate.create({
+          //     data: message,
+          //   });
 
-          const existingChat = await this.prismaRepository.chat.findFirst({
-            where: { instanceId: this.instanceId, remoteJid: message.remoteJid },
-          });
+          // const existingChat = await this.prismaRepository.chat.findFirst({
+          //   where: { instanceId: this.instanceId, remoteJid: message.remoteJid },
+          // });
 
-          if (existingChat) {
-            const chatToInsert = {
-              remoteJid: message.remoteJid,
-              instanceId: this.instanceId,
-              name: message.pushName || '',
-              unreadMessages: 0,
-            };
+          // if (existingChat) {
+          //   const chatToInsert = {
+          //     remoteJid: message.remoteJid,
+          //     instanceId: this.instanceId,
+          //     name: message.pushName || '',
+          //     unreadMessages: 0,
+          //   };
 
-            this.sendDataWebhook(Events.CHATS_UPSERT, [chatToInsert]);
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.CHATS) {
-              try {
-                await this.prismaRepository.chat.update({
-                  where: {
-                    id: existingChat.id,
-                  },
-                  data: chatToInsert,
-                });
-              } catch (error) {
-                console.log(`Chat insert record ignored: ${chatToInsert.remoteJid} - ${chatToInsert.instanceId}`);
-              }
-            }
-          }
+          //   this.sendDataWebhook(Events.CHATS_UPSERT, [chatToInsert]);
+          //   if (this.configService.get<Database>('DATABASE').SAVE_DATA.CHATS) {
+          //     try {
+          //       await this.prismaRepository.chat.update({
+          //         where: {
+          //           id: existingChat.id,
+          //         },
+          //         data: chatToInsert,
+          //       });
+          //     } catch (error) {
+          //       console.log(`Chat insert record ignored: ${chatToInsert.remoteJid} - ${chatToInsert.instanceId}`);
+          //     }
+          //   }
+          // }
         }
       }
 
-      await Promise.all(Object.keys(readChatToUpdate).map((remoteJid) => this.updateChatUnreadMessages(remoteJid)));
+      //await Promise.all(Object.keys(readChatToUpdate).map((remoteJid) => this.updateChatUnreadMessages(remoteJid)));
     },
   };
 
@@ -1411,22 +1411,22 @@ export class BaileysStartupService extends ChannelStartupService {
           this.messageHandle['messages.update'](payload, settings);
         }
 
-        if (events['message-receipt.update']) {
-          const payload = events['message-receipt.update'] as MessageUserReceiptUpdate[];
-          const remotesJidMap: Record<string, number> = {};
+        // if (events['message-receipt.update']) {
+        //   const payload = events['message-receipt.update'] as MessageUserReceiptUpdate[];
+        //   const remotesJidMap: Record<string, number> = {};
 
-          for (const event of payload) {
-            if (typeof event.key.remoteJid === 'string' && typeof event.receipt.readTimestamp === 'number') {
-              remotesJidMap[event.key.remoteJid] = event.receipt.readTimestamp;
-            }
-          }
+        //   for (const event of payload) {
+        //     if (typeof event.key.remoteJid === 'string' && typeof event.receipt.readTimestamp === 'number') {
+        //       remotesJidMap[event.key.remoteJid] = event.receipt.readTimestamp;
+        //     }
+        //   }
 
-          await Promise.all(
-            Object.keys(remotesJidMap).map(async (remoteJid) =>
-              this.updateMessagesReadedByTimestamp(remoteJid, remotesJidMap[remoteJid]),
-            ),
-          );
-        }
+        //   await Promise.all(
+        //     Object.keys(remotesJidMap).map(async (remoteJid) =>
+        //       this.updateMessagesReadedByTimestamp(remoteJid, remotesJidMap[remoteJid]),
+        //     ),
+        //   );
+        // }
 
         if (events['presence.update']) {
           const payload = events['presence.update'];
@@ -3805,57 +3805,57 @@ export class BaileysStartupService extends ChannelStartupService {
     return messageRaw;
   }
 
-  private async updateMessagesReadedByTimestamp(remoteJid: string, timestamp?: number): Promise<number> {
-    if (timestamp === undefined || timestamp === null) return 0;
+  // private async updateMessagesReadedByTimestamp(remoteJid: string, timestamp?: number): Promise<number> {
+  //   if (timestamp === undefined || timestamp === null) return 0;
 
-    const result = await this.prismaRepository.message.updateMany({
-      where: {
-        AND: [
-          { key: { path: ['remoteJid'], equals: remoteJid } },
-          { key: { path: ['fromMe'], equals: false } },
-          { messageTimestamp: { lte: timestamp } },
-          {
-            OR: [{ status: null }, { status: status[3] }],
-          },
-        ],
-      },
-      data: { status: status[4] },
-    });
+  //   const result = await this.prismaRepository.message.updateMany({
+  //     where: {
+  //       AND: [
+  //         { key: { path: ['remoteJid'], equals: remoteJid } },
+  //         { key: { path: ['fromMe'], equals: false } },
+  //         { messageTimestamp: { lte: timestamp } },
+  //         {
+  //           OR: [{ status: null }, { status: status[3] }],
+  //         },
+  //       ],
+  //     },
+  //     data: { status: status[4] },
+  //   });
 
-    if (result) {
-      if (result.count > 0) {
-        this.updateChatUnreadMessages(remoteJid);
-      }
+  //   if (result) {
+  //     if (result.count > 0) {
+  //       this.updateChatUnreadMessages(remoteJid);
+  //     }
 
-      return result.count;
-    }
+  //     return result.count;
+  //   }
 
-    return 0;
-  }
+  //   return 0;
+  // }
 
-  private async updateChatUnreadMessages(remoteJid: string): Promise<number> {
-    const [chat, unreadMessages] = await Promise.all([
-      this.prismaRepository.chat.findFirst({ where: { remoteJid } }),
-      this.prismaRepository.message.count({
-        where: {
-          AND: [
-            { key: { path: ['remoteJid'], equals: remoteJid } },
-            { key: { path: ['fromMe'], equals: false } },
-            { status: { equals: status[3] } },
-          ],
-        },
-      }),
-    ]);
+  // private async updateChatUnreadMessages(remoteJid: string): Promise<number> {
+  //   const [chat, unreadMessages] = await Promise.all([
+  //     this.prismaRepository.chat.findFirst({ where: { remoteJid } }),
+  //     this.prismaRepository.message.count({
+  //       where: {
+  //         AND: [
+  //           { key: { path: ['remoteJid'], equals: remoteJid } },
+  //           { key: { path: ['fromMe'], equals: false } },
+  //           { status: { equals: status[3] } },
+  //         ],
+  //       },
+  //     }),
+  //   ]);
 
-    if (chat && chat.unreadMessages !== unreadMessages) {
-      await this.prismaRepository.chat.update({
-        where: { id: chat.id },
-        data: { unreadMessages },
-      });
-    }
+  //   if (chat && chat.unreadMessages !== unreadMessages) {
+  //     await this.prismaRepository.chat.update({
+  //       where: { id: chat.id },
+  //       data: { unreadMessages },
+  //     });
+  //   }
 
-    return unreadMessages;
-  }
+  //   return unreadMessages;
+  // }
 
   private async addLabel(labelId: string, instanceId: string, chatId: string) {
     const id = cuid();
