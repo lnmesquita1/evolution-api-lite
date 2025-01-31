@@ -1,6 +1,6 @@
 {
   "name": "evolution-api",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "description": "Rest api for communication with WhatsApp",
   "main": "./dist/main.js",
   "type": "commonjs",
@@ -57,7 +57,7 @@
     "@sentry/node": "^8.47.0",
     "amqplib": "^0.10.5",
     "axios": "^1.7.9",
-    "baileys": "github:WhiskeySockets/Baileys#master",
+    "baileys": "6.7.12",
     "class-validator": "^0.14.1",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
