@@ -130,6 +130,16 @@ export declare namespace wa {
   };
 
   export type StatusMessage = 'ERROR' | 'PENDING' | 'SERVER_ACK' | 'DELIVERY_ACK' | 'READ' | 'DELETED' | 'PLAYED';
+
+  export type HistorySetData = {
+    contacts: HistorySetContact[];
+    messages: any[];
+  }
+  
+  export type HistorySetContact = {
+    id: string;
+    name: string;
+  }
 }
 
 export const TypeMediaMessage = [

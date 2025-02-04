@@ -14,6 +14,7 @@ export type EmitData = {
   apiKey?: string;
   local?: boolean;
   integration?: string[];
+  historySetData?: wa.HistorySetData;
 };
 
 export interface EventControllerInterface {

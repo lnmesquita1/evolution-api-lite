@@ -65,6 +65,7 @@ export class WebhookController extends EventController implements EventControlle
     apiKey,
     local,
     integration,
+    historySetData
   }: EmitData): Promise<void> {
     if (integration && !integration.includes('webhook')) {
       return;
@@ -83,6 +84,7 @@ export class WebhookController extends EventController implements EventControlle
       event,
       instance: instanceName,
       data,
+      historySetData,
       destination: instance?.url || `${webhookConfig.GLOBAL.URL}/${transformedWe}`,
       date_time: dateTime,
       sender,

@@ -5,6 +5,7 @@ import { WebhookController } from '@api/integrations/event/webhook/webhook.contr
 import { WebsocketController } from '@api/integrations/event/websocket/websocket.controller';
 import { PrismaRepository } from '@api/repository/repository.service';
 import { WAMonitoringService } from '@api/services/monitor.service';
+import { wa } from '@api/types/wa.types';
 import { Server } from 'http';
 
 export class EventManager {
@@ -100,6 +101,7 @@ export class EventManager {
     apiKey?: string;
     local?: boolean;
     integration?: string[];
+    historySetData?: wa.HistorySetData;
   }): Promise<void> {
     await this.websocket.emit(eventData);
     await this.rabbitmq.emit(eventData);

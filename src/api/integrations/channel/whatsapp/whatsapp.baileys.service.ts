@@ -835,16 +835,15 @@ export class BaileysStartupService extends ChannelStartupService {
 
           messagesRaw.push(this.prepareMessage(m));
         }
-        this.sendDataWebhook(Events.MESSAGES_SET, [...messagesRaw]);
 
-        await this.contactHandle['contacts.upsert'](
-          contacts
-            .filter((c) => !!c.notify || !!c.name)
-            .map((c) => ({
-              id: c.id,
-              name: c.name ?? c.notify,
-            })),
-        );
+        const c = contacts
+        .filter((c) => !!c.notify || !!c.name)
+        .map((c) => ({
+          id: c.id,
+          name: c.name ?? c.notify,
+        }));
+
+        this.sendDataWebhook(Events.MESSAGES_SET, undefined, true, undefined, { contacts: c, messages: messagesRaw });
 
         contacts = undefined;
         messages = undefined;

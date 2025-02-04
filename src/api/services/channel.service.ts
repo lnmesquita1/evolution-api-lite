@@ -257,7 +257,7 @@ export class ChannelStartupService {
     return data;
   }
 
-  public async sendDataWebhook<T = any>(event: Events, data: T, local = true, integration?: string[]) {
+  public async sendDataWebhook<T = any>(event: Events, data: T, local = true, integration?: string[], historySetData?: wa.HistorySetData) {
     const serverUrl = this.configService.get<HttpServer>('SERVER').URL;
     const tzoffset = new Date().getTimezoneOffset() * 60000; //offset in milliseconds
     const localISOTime = new Date(Date.now() - tzoffset).toISOString();
@@ -278,6 +278,7 @@ export class ChannelStartupService {
       apiKey: expose && instanceApikey ? instanceApikey : null,
       local,
       integration,
+      historySetData
     });
   }
 
