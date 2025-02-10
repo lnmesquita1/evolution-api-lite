@@ -505,19 +505,6 @@ export class BusinessStartupService extends ChannelStartupService {
             return;
           }
           if (key.remoteJid !== 'status@broadcast' && !key?.remoteJid?.match(/(:\d+)/)) {
-            const findMessage = await this.prismaRepository.message.findFirst({
-              where: {
-                instanceId: this.instanceId,
-                key: {
-                  path: ['id'],
-                  equals: key.id,
-                },
-              },
-            });
-
-            if (!findMessage) {
-              return;
-            }
 
             if (item.status === 'read' && key.fromMe) return;
 
@@ -525,7 +512,7 @@ export class BusinessStartupService extends ChannelStartupService {
               this.sendDataWebhook(Events.MESSAGES_DELETE, key);
 
               const message: any = {
-                messageId: findMessage.id,
+                messageId: item.id,
                 keyId: key.id,
                 remoteJid: key.remoteJid,
                 fromMe: key.fromMe,
@@ -542,7 +529,7 @@ export class BusinessStartupService extends ChannelStartupService {
             }
 
             const message: any = {
-              messageId: findMessage.id,
+              messageId: item.id,
               keyId: key.id,
               remoteJid: key.remoteJid,
               fromMe: key.fromMe,
@@ -556,10 +543,6 @@ export class BusinessStartupService extends ChannelStartupService {
             await this.prismaRepository.messageUpdate.create({
               data: message,
             });
-
-            if (findMessage.webhookUrl) {
-              await axios.post(findMessage.webhookUrl, message);
-            }
           }
         }
       }
