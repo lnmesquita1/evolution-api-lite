@@ -1090,9 +1090,9 @@ export class BaileysStartupService extends ChannelStartupService {
 
           this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
 
-          const contact = await this.prismaRepository.contact.findFirst({
-            where: { remoteJid: received.key.remoteJid, instanceId: this.instanceId },
-          });
+          // const contact = await this.prismaRepository.contact.findFirst({
+          //   where: { remoteJid: received.key.remoteJid, instanceId: this.instanceId },
+          // });
 
           const contactRaw: { remoteJid: string; pushName: string; profilePicUrl?: string; instanceId: string } = {
             remoteJid: received.key.remoteJid,
@@ -1105,32 +1105,32 @@ export class BaileysStartupService extends ChannelStartupService {
             continue;
           }
 
-          if (contact) {
-            this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
+          // if (contact) {
+          //   this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
 
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.CONTACTS)
-              await this.prismaRepository.contact.upsert({
-                where: { remoteJid_instanceId: { remoteJid: contactRaw.remoteJid, instanceId: contactRaw.instanceId } },
-                create: contactRaw,
-                update: contactRaw,
-              });
+          //   if (this.configService.get<Database>('DATABASE').SAVE_DATA.CONTACTS)
+          //     await this.prismaRepository.contact.upsert({
+          //       where: { remoteJid_instanceId: { remoteJid: contactRaw.remoteJid, instanceId: contactRaw.instanceId } },
+          //       create: contactRaw,
+          //       update: contactRaw,
+          //     });
 
-            continue;
-          }
+          //   continue;
+          // }
 
-          this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
+          // this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
 
-          if (this.configService.get<Database>('DATABASE').SAVE_DATA.CONTACTS)
-            await this.prismaRepository.contact.upsert({
-              where: {
-                remoteJid_instanceId: {
-                  remoteJid: contactRaw.remoteJid,
-                  instanceId: contactRaw.instanceId,
-                },
-              },
-              update: contactRaw,
-              create: contactRaw,
-            });
+          // if (this.configService.get<Database>('DATABASE').SAVE_DATA.CONTACTS)
+          //   await this.prismaRepository.contact.upsert({
+          //     where: {
+          //       remoteJid_instanceId: {
+          //         remoteJid: contactRaw.remoteJid,
+          //         instanceId: contactRaw.instanceId,
+          //       },
+          //     },
+          //     update: contactRaw,
+          //     create: contactRaw,
+          //   });
 
           if (contactRaw.remoteJid.includes('@s.whatsapp')) {
             await saveOnWhatsappCache([{ remoteJid: contactRaw.remoteJid }]);

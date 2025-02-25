@@ -511,19 +511,19 @@ export class BusinessStartupService extends ChannelStartupService {
             if (item.message === null && item.status === undefined) {
               this.sendDataWebhook(Events.MESSAGES_DELETE, key);
 
-              const message: any = {
-                messageId: item.id,
-                keyId: key.id,
-                remoteJid: key.remoteJid,
-                fromMe: key.fromMe,
-                participant: key?.remoteJid,
-                status: 'DELETED',
-                instanceId: this.instanceId,
-              };
+              // const message: any = {
+              //   messageId: item.id,
+              //   keyId: key.id,
+              //   remoteJid: key.remoteJid,
+              //   fromMe: key.fromMe,
+              //   participant: key?.remoteJid,
+              //   status: 'DELETED',
+              //   instanceId: this.instanceId,
+              // };
 
-              await this.prismaRepository.messageUpdate.create({
-                data: message,
-              });
+              // await this.prismaRepository.messageUpdate.create({
+              //   data: message,
+              // });
 
               return;
             }
@@ -540,9 +540,9 @@ export class BusinessStartupService extends ChannelStartupService {
 
             this.sendDataWebhook(Events.MESSAGES_UPDATE, message);
 
-            await this.prismaRepository.messageUpdate.create({
-              data: message,
-            });
+            // await this.prismaRepository.messageUpdate.create({
+            //   data: message,
+            // });
           }
         }
       }
