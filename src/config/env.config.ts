@@ -146,6 +146,7 @@ export type EventsWebhook = {
   GROUP_UPDATE: boolean;
   GROUP_PARTICIPANTS_UPDATE: boolean;
   CALL: boolean;
+  TEMPLATE_STATUS: boolean;
   TYPEBOT_START: boolean;
   TYPEBOT_CHANGE_STATUS: boolean;
   ERRORS: boolean;
@@ -492,6 +493,7 @@ export class ConfigService {
           GROUP_UPDATE: process.env?.WEBHOOK_EVENTS_GROUPS_UPDATE === 'true',
           GROUP_PARTICIPANTS_UPDATE: process.env?.WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE === 'true',
           CALL: process.env?.WEBHOOK_EVENTS_CALL === 'true',
+          TEMPLATE_STATUS: process.env?.WEBHOOK_EVENTS_TEMPLATE_STATUS === 'true',
           TYPEBOT_START: process.env?.WEBHOOK_EVENTS_TYPEBOT_START === 'true',
           TYPEBOT_CHANGE_STATUS: process.env?.WEBHOOK_EVENTS_TYPEBOT_CHANGE_STATUS === 'true',
           ERRORS: process.env?.WEBHOOK_EVENTS_ERRORS === 'true',

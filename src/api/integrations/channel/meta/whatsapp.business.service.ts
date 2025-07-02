@@ -121,9 +121,13 @@ export class BusinessStartupService extends ChannelStartupService {
   public async connectToWhatsapp(data?: any): Promise<any> {
     if (!data) return;
 
-    const content = data.entry[0].changes[0].value;
-
     try {
+      if (data.entry[0].changes[0]?.field === 'message_template_status_update') {
+        this.sendDataWebhook(Events.TEMPLATE_STATUS, { newTemplateStatus: data });
+        return;
+      };
+
+      const content = data.entry[0].changes[0].value;
       this.eventHandler(content);
 
       this.phoneNumber = createJid(content.messages ? content.messages[0].from : content.statuses[0]?.recipient_id);
