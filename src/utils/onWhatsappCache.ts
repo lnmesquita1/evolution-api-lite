@@ -52,6 +52,7 @@ function getAvailableNumbers(remoteJid: string) {
 
 interface ISaveOnWhatsappCacheParams {
   remoteJid: string;
+  lid?: string;
 }
 export async function saveOnWhatsappCache(data: ISaveOnWhatsappCacheParams[]) {
   if (configService.get<Database>('DATABASE').SAVE_DATA.IS_ON_WHATSAPP) {
@@ -60,8 +61,15 @@ export async function saveOnWhatsappCache(data: ISaveOnWhatsappCacheParams[]) {
       const numbersAvailable = getAvailableNumbers(remoteJid);
 
       return prismaRepository.isOnWhatsapp.upsert({
-        create: { remoteJid: remoteJid, jidOptions: numbersAvailable.join(',') },
-        update: { jidOptions: numbersAvailable.join(',') },
+        create: {
+          remoteJid: remoteJid,
+          jidOptions: numbersAvailable.join(','),
+          lid: item.lid,
+        },
+        update: {
+          jidOptions: numbersAvailable.join(','),
+          lid: item.lid,
+        },
         where: { remoteJid: remoteJid },
       });
     });
@@ -75,6 +83,7 @@ export async function getOnWhatsappCache(remoteJids: string[]) {
     remoteJid: string;
     number: string;
     jidOptions: string[];
+    lid?: string;
   }[] = [];
 
   if (configService.get<Database>('DATABASE').SAVE_DATA.IS_ON_WHATSAPP) {
@@ -93,6 +102,7 @@ export async function getOnWhatsappCache(remoteJids: string[]) {
       remoteJid: item.remoteJid,
       number: item.remoteJid.split('@')[0],
       jidOptions: item.jidOptions.split(','),
+      lid: item.lid,
     }));
   }
 
