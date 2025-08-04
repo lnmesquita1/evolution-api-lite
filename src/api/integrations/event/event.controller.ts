@@ -148,6 +148,7 @@ export class EventController {
     'LABELS_EDIT',
     'LABELS_ASSOCIATION',
     'CALL',
+    'TEMPLATE_STATUS',
     'TYPEBOT_START',
     'TYPEBOT_CHANGE_STATUS',
     'REMOVE_INSTANCE',

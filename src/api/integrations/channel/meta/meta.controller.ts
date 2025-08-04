@@ -18,23 +18,22 @@ export class MetaController extends ChannelController implements ChannelControll
     this.logger.info('VALOR DE DATA META: ' + JSON.stringify(data))
     if (data.object === 'whatsapp_business_account') {
       if (data.entry[0]?.changes[0]?.field === 'message_template_status_update') {
-        const template = await this.prismaRepository.template.findFirst({
-          where: { templateId: `${data.entry[0].changes[0].value.message_template_id}` },
-        });
+        const wabaId = data.entry[0]?.id;
+          if (!wabaId) {
+            this.logger.error('WebhookService -> receiveWebhookMeta -> wabaId not found');
+            return;
+          }
+          const instance = await this.prismaRepository.instance.findFirst({
+            where: { name: wabaId },
+          });
 
-        if (!template) {
-          console.log('template not found');
+          if (!instance) {
+            this.logger.error('WebhookService -> receiveWebhookMeta -> instance not found');
+            return;
+          }
+
+          await this.waMonitor.waInstances[instance.name].connectToWhatsapp(data);
           return;
-        }
-
-        const { webhookUrl } = template;
-
-        await axios.post(webhookUrl, data.entry[0].changes[0].value, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        return;
       }
 
       data.entry?.forEach(async (entry: any) => {
