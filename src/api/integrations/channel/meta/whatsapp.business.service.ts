@@ -205,14 +205,40 @@ export class BusinessStartupService extends ChannelStartupService {
   private messageTextJson(received: any) {
     let content: any;
     const message = received.messages[0];
+    const referral = message.referral;
+
+    const externalAdReply = referral?.source_url
+      ? {
+        externalAdReply: {
+          sourceUrl: referral?.source_url,
+          title: referral?.headline,
+          thumbnailUrl: referral?.thumbnail_url
+        }
+      }
+      : undefined;
+
     if (message.from === received.metadata.phone_number_id) {
       content = {
-        extendedTextMessage: { text: message.text.body },
+        extendedTextMessage: { text: message?.text?.body },
       };
-      message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+      if (message.context?.id) {
+        content.contextInfo = {
+          stanzaId: message?.context?.id,
+          ...externalAdReply,
+        };
+      } else if (externalAdReply) {
+        content.contextInfo = externalAdReply;
+      }
     } else {
-      content = { conversation: message.text.body };
-      message.context ? (content = { ...content, contextInfo: { stanzaId: message.context.id } }) : content;
+      content = { conversation: message?.text?.body };
+      if (message?.context?.id) {
+        content.contextInfo = {
+          stanzaId: message?.context?.id,
+          ...externalAdReply,
+        };
+      } else if (externalAdReply) {
+        content.contextInfo = externalAdReply;
+      }
     }
     return content;
   }
@@ -468,6 +494,7 @@ export class BusinessStartupService extends ChannelStartupService {
             messageType: this.renderMessageType(received.messages[0].type),
             messageTimestamp: parseInt(received.messages[0].timestamp) as number,
             source: 'unknown',
+            errors: received.messages[0].errors || [],
             instanceId: this.instanceId,
           };
         }
