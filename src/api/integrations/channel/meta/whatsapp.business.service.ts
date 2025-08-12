@@ -127,6 +127,11 @@ export class BusinessStartupService extends ChannelStartupService {
         return;
       };
 
+      if (data.entry[0].changes[0]?.value?.event === 'PARTNER_APP_UNINSTALLED') {
+        this.sendDataWebhook(Events.WABA_ACCOUNT_STATUS, { appUninstalled: true });
+        return;
+      };
+
       const content = data.entry[0].changes[0].value;
       this.eventHandler(content);
 
