@@ -35,7 +35,8 @@ export enum Events {
   MESSAGING_HISTORY_SET = 'messaging-history.set',
   REMOVE_INSTANCE = 'remove.instance',
   LOGOUT_INSTANCE = 'logout.instance',
-  TEMPLATE_STATUS = 'template.status'
+  TEMPLATE_STATUS = 'template.status',
+  WABA_ACCOUNT_STATUS = 'waba.account.status',
 }
 
 export declare namespace wa {

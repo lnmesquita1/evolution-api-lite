@@ -36,6 +36,25 @@ export class MetaController extends ChannelController implements ChannelControll
           return;
       }
 
+      if (data.entry[0]?.changes[0]?.field === 'account_update') {
+        const wabaId = data.entry[0]?.changes[0]?.value?.waba_info?.waba_id;
+          if (!wabaId) {
+            this.logger.error('WebhookService -> receiveWebhookMeta -> wabaId not found');
+            return;
+          }
+          const instance = await this.prismaRepository.instance.findFirst({
+            where: { name: wabaId },
+          });
+
+          if (!instance) {
+            this.logger.error('WebhookService -> receiveWebhookMeta -> instance not found');
+            return;
+          }
+
+        await this.waMonitor.waInstances[instance.name].connectToWhatsapp(data);
+        return;
+      }
+
       data.entry?.forEach(async (entry: any) => {
         const numberId = entry.changes[0].value.metadata.phone_number_id;
 
