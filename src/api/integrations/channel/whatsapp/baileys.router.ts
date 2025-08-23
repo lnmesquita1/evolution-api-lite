@@ -77,7 +77,8 @@ export class BaileysRouter extends RouterBroker {
           execute: (instance) => baileysController.downloadMediaMessage(instance, req.body),
         });
 
-        res.status(HttpStatus.OK).json(response);
+        res.setHeader("Content-Type", "application/octet-stream");
+        response.pipe(res);
       })
       .post(this.routerPath('sendNode'), ...guards, async (req, res) => {
         const response = await this.dataValidate<InstanceDto>({
