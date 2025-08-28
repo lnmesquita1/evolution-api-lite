@@ -6,6 +6,6 @@ export class CallController {
   constructor(private readonly waMonitor: WAMonitoringService) {}
 
   public async offerCall({ instanceName }: InstanceDto, data: OfferCallDto) {
-    return await this.waMonitor.waInstances[instanceName].offerCall(data);
+    //return await this.waMonitor.waInstances[instanceName].offerCall(data);
   }
 }
