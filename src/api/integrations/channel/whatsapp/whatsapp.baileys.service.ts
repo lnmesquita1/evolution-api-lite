@@ -139,6 +139,7 @@ import { v4 } from 'uuid';
 import { useVoiceCallsBaileys } from './voiceCalls/useVoiceCallsBaileys';
 
 const groupMetadataCache = new CacheService(new CacheEngine(configService, 'groups').getEngine());
+const messagesCache = new CacheService(new CacheEngine(configService, 'messages').getEngine());
 
 interface IMessageKeyWithExtras extends proto.IMessageKey {
   senderPn?: string | null;
@@ -398,20 +399,25 @@ export class BaileysStartupService extends ChannelStartupService {
 
   private async getMessage(key: proto.IMessageKey, full = false) {
     try {
-      const webMessageInfo = (await this.prismaRepository.message.findMany({
-        where: {
-          instanceId: this.instanceId,
-          key: {
-            path: ['id'],
-            equals: key.id,
-          },
-        },
-      })) as unknown as proto.IWebMessageInfo[];
-      if (full) {
-        return webMessageInfo[0];
+      // const webMessageInfo = (await this.prismaRepository.message.findMany({
+      //   where: {
+      //     instanceId: this.instanceId,
+      //     key: {
+      //       path: ['id'],
+      //       equals: key.id,
+      //     },
+      //   },
+      // })) as unknown as proto.IWebMessageInfo[];
+      const cacheMessage = await messagesCache.get(`${this.instanceId}_${key.id}`);
+      const webMessageInfo = cacheMessage ? cacheMessage.data : null;
+      if (!webMessageInfo) {
+        throw new NotFoundException('Message not found on cache. ID: ' + key.id);
       }
-      if (webMessageInfo[0].message?.pollCreationMessage) {
-        const messageSecretBase64 = webMessageInfo[0].message?.messageContextInfo?.messageSecret;
+      if (full) {
+        return webMessageInfo;
+      }
+      if (webMessageInfo.message?.pollCreationMessage) {
+        const messageSecretBase64 = webMessageInfo.message?.messageContextInfo?.messageSecret;
 
         if (typeof messageSecretBase64 === 'string') {
           const messageSecret = Buffer.from(messageSecretBase64, 'base64');
@@ -420,14 +426,15 @@ export class BaileysStartupService extends ChannelStartupService {
             messageContextInfo: {
               messageSecret,
             },
-            pollCreationMessage: webMessageInfo[0].message?.pollCreationMessage,
+            pollCreationMessage: webMessageInfo.message?.pollCreationMessage,
           };
 
           return msg;
         }
       }
 
-      return webMessageInfo[0].message;
+      this.logger.info('getMessage: returning message from cache: ' + JSON.stringify(webMessageInfo.message));
+      return webMessageInfo.message;
     } catch (error) {
       return { conversation: '' };
     }
@@ -549,7 +556,7 @@ export class BaileysStartupService extends ChannelStartupService {
       },
       msgRetryCounterCache: this.msgRetryCounterCache,
       generateHighQualityLinkPreview: true,
-      // getMessage: async (key) => (await this.getMessage(key)) as Promise<proto.IMessage>,
+      getMessage: async (key) => (await this.getMessage(key)) as Promise<proto.IMessage>,
       ...browserOptions,
       markOnlineOnConnect: this.localSettings.alwaysOnline,
       retryRequestDelayMs: 350,
@@ -1039,9 +1046,12 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           if (this.configService.get<Database>('DATABASE').SAVE_DATA.NEW_MESSAGE) {
-            const msg = await this.prismaRepository.message.create({
+            await messagesCache.set(`${this.instanceId}:${received.key.id}`, {
               data: messageRaw,
-            });
+            }, 60 * 60); // 60 minutes
+            // const msg = await this.prismaRepository.message.create({
+            //   data: messageRaw,
+            // });
 
             // if (received.key.fromMe === false) {
             //   if (msg.status === status[3]) {
