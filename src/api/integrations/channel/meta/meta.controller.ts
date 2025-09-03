@@ -15,7 +15,12 @@ export class MetaController extends ChannelController implements ChannelControll
   integrationEnabled: boolean;
 
   public async receiveWebhook(data: any) {
-    this.logger.info('VALOR DE DATA META: ' + JSON.stringify(data))
+    try {
+      this.logger.info('VALOR DE DATA META: ' + JSON.stringify(data));
+    } catch (error: any) {
+      this.logger.error('=== ERRO NO LOG ===' + error.message);
+      this.logger.info('VALOR DE DATA META (sem stringify): ' + data);
+    }
     if (data.object === 'whatsapp_business_account') {
       if (data.entry[0]?.changes[0]?.field === 'message_template_status_update') {
         const wabaId = data.entry[0]?.id;
