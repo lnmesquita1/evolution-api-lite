@@ -135,7 +135,7 @@ export class BusinessStartupService extends ChannelStartupService {
       const content = data.entry[0].changes[0].value;
       this.eventHandler(content);
 
-      this.phoneNumber = createJid(content.messages ? content.messages[0].from : content.statuses[0]?.recipient_id);
+      this.phoneNumber = createJid(content.messages ? content.messages[0].from : content.message_echoes ? content.message_echoes[0].from : content.statuses[0]?.recipient_id);
     } catch (error) {
       this.logger.error(error);
       throw new InternalServerErrorException(error?.toString());
@@ -339,13 +339,20 @@ export class BusinessStartupService extends ChannelStartupService {
       let messageRaw: any;
       let pushName: any;
 
+      if (received?.message_echoes[0]) {
+        this.logger.info(`Property 'message_echoes' detected. Renaming to 'messages': ${JSON.stringify(received.message_echoes)}`)
+        received.messages = received.message_echoes;
+        delete received.message_echoes;
+      };
+
       if (received.contacts) pushName = received.contacts[0].profile.name;
 
       if (received.messages) {
         const key = {
           id: received.messages[0].id,
           remoteJid: this.phoneNumber,
-          fromMe: received.messages[0].from === received.metadata.phone_number_id,
+          fromMe: (received.messages[0].from === received.metadata.phone_number_id) ||
+            (received.messages[0].from === received.metadata.display_phone_number),
         };
         if (this.isMediaMessage(received?.messages[0])) {
           messageRaw = {
