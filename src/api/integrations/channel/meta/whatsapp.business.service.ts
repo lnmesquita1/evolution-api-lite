@@ -338,11 +338,13 @@ export class BusinessStartupService extends ChannelStartupService {
     try {
       let messageRaw: any;
       let pushName: any;
+      let messageEchoes = false;
 
-      if (received?.message_echoes[0]) {
+      if (received?.message_echoes) {
         this.logger.info(`Property 'message_echoes' detected. Renaming to 'messages': ${JSON.stringify(received.message_echoes)}`)
         received.messages = received.message_echoes;
         delete received.message_echoes;
+        messageEchoes = true;
       };
 
       if (received.contacts) pushName = received.contacts[0].profile.name;
@@ -521,43 +523,45 @@ export class BusinessStartupService extends ChannelStartupService {
         //   });
         // }
 
-        const contact = await this.prismaRepository.contact.findFirst({
-          where: { instanceId: this.instanceId, remoteJid: key.remoteJid },
-        });
-
-        const contactRaw: any = {
-          remoteJid: received.contacts[0].profile.phone,
-          pushName,
-          // profilePicUrl: '',
-          instanceId: this.instanceId,
-        };
-
-        if (contactRaw.remoteJid === 'status@broadcast') {
-          return;
-        }
-
-        if (contact) {
+        if (!messageEchoes) {
+          const contact = await this.prismaRepository.contact.findFirst({
+            where: { instanceId: this.instanceId, remoteJid: key.remoteJid },
+          });
+  
           const contactRaw: any = {
             remoteJid: received.contacts[0].profile.phone,
             pushName,
             // profilePicUrl: '',
             instanceId: this.instanceId,
           };
+  
+          if (contactRaw.remoteJid === 'status@broadcast') {
+            return;
+          }
+  
+          if (contact) {
+            const contactRaw: any = {
+              remoteJid: received.contacts[0].profile.phone,
+              pushName,
+              // profilePicUrl: '',
+              instanceId: this.instanceId,
+            };
+  
+            this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
+  
+            await this.prismaRepository.contact.updateMany({
+              where: { remoteJid: contact.remoteJid },
+              data: contactRaw,
+            });
+            return;
+          }
+  
+          this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
 
-          this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
-
-          await this.prismaRepository.contact.updateMany({
-            where: { remoteJid: contact.remoteJid },
+          this.prismaRepository.contact.create({
             data: contactRaw,
           });
-          return;
         }
-
-        this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
-
-        this.prismaRepository.contact.create({
-          data: contactRaw,
-        });
       }
       if (received.statuses) {
         for await (const item of received.statuses) {
