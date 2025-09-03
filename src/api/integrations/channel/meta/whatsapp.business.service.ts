@@ -122,20 +122,57 @@ export class BusinessStartupService extends ChannelStartupService {
     if (!data) return;
 
     try {
-      if (data.entry[0].changes[0]?.field === 'message_template_status_update') {
+      // Add validation checks for nested properties
+      if (!data.entry || !Array.isArray(data.entry) || data.entry.length === 0) {
+        this.logger.warn('Invalid webhook data: missing or empty entry array: ' + JSON.stringify(data));
+        return;
+      }
+
+      const entry = data.entry[0];
+      if (!entry.changes || !Array.isArray(entry.changes) || entry.changes.length === 0) {
+        this.logger.warn('Invalid webhook data: missing or empty changes array: ' + JSON.stringify(entry));
+        return;
+      }
+
+      const change = entry.changes[0];
+      if (!change) {
+        this.logger.warn('Invalid webhook data: missing change object: ' + JSON.stringify(entry.changes));
+        return;
+      }
+
+      if (change.field === 'message_template_status_update') {
         this.sendDataWebhook(Events.TEMPLATE_STATUS, { newTemplateStatus: data });
         return;
-      };
+      }
 
-      if (data.entry[0].changes[0]?.value?.event === 'PARTNER_APP_UNINSTALLED') {
+      if (change.value?.event === 'PARTNER_APP_UNINSTALLED') {
         this.sendDataWebhook(Events.WABA_ACCOUNT_STATUS, { appUninstalled: true });
         return;
-      };
+      }
 
-      const content = data.entry[0].changes[0].value;
+      const content = change.value;
+      if (!content) {
+        this.logger.warn('Invalid webhook data: missing value in change: ' + JSON.stringify(change));
+        return;
+      }
+
       this.eventHandler(content);
 
-      this.phoneNumber = createJid(content.messages ? content.messages[0].from : content.message_echoes ? content.message_echoes[0].from : content.statuses[0]?.recipient_id);
+      // Add validation for phoneNumber extraction
+      let fromNumber: string | undefined;
+      if (content.messages && Array.isArray(content.messages) && content.messages.length > 0) {
+        fromNumber = content.messages[0].from;
+      } else if (content.message_echoes && Array.isArray(content.message_echoes) && content.message_echoes.length > 0) {
+        fromNumber = content.message_echoes[0].from;
+      } else if (content.statuses && Array.isArray(content.statuses) && content.statuses.length > 0) {
+        fromNumber = content.statuses[0]?.recipient_id;
+      }
+
+      if (fromNumber) {
+        this.phoneNumber = createJid(fromNumber);
+      } else {
+        this.logger.warn('Could not extract phone number from webhook data: ' + JSON.stringify(content));
+      }
     } catch (error) {
       this.logger.error(error);
       throw new InternalServerErrorException(error?.toString());
@@ -339,20 +376,22 @@ export class BusinessStartupService extends ChannelStartupService {
       let messageRaw: any;
       let pushName: any;
 
-      if (received?.message_echoes[0]) {
+      if (received?.message_echoes && Array.isArray(received.message_echoes) && received.message_echoes.length > 0) {
         this.logger.info(`Property 'message_echoes' detected. Renaming to 'messages': ${JSON.stringify(received.message_echoes)}`)
         received.messages = received.message_echoes;
         delete received.message_echoes;
       };
 
-      if (received.contacts) pushName = received.contacts[0].profile.name;
+      if (received.contacts && Array.isArray(received.contacts) && received.contacts.length > 0 && received.contacts[0]?.profile?.name) {
+        pushName = received.contacts[0].profile.name;
+      }
 
-      if (received.messages) {
+      if (received.messages && Array.isArray(received.messages) && received.messages.length > 0) {
         const key = {
           id: received.messages[0].id,
           remoteJid: this.phoneNumber,
-          fromMe: (received.messages[0].from === received.metadata.phone_number_id) ||
-            (received.messages[0].from === received.metadata.display_phone_number),
+          fromMe: (received.messages[0].from === received.metadata?.phone_number_id) ||
+            (received.messages[0].from === received.metadata?.display_phone_number),
         };
         if (this.isMediaMessage(received?.messages[0])) {
           messageRaw = {
@@ -521,50 +560,58 @@ export class BusinessStartupService extends ChannelStartupService {
         //   });
         // }
 
-        const contact = await this.prismaRepository.contact.findFirst({
-          where: { instanceId: this.instanceId, remoteJid: key.remoteJid },
-        });
+        // const contact = await this.prismaRepository.contact.findFirst({
+        //   where: { instanceId: this.instanceId, remoteJid: key.remoteJid },
+        // });
 
-        const contactRaw: any = {
-          remoteJid: received.contacts[0].profile.phone,
-          pushName,
-          // profilePicUrl: '',
-          instanceId: this.instanceId,
-        };
+        // Verificar se contacts existe e tem pelo menos um elemento
+        // if (!received.contacts || !Array.isArray(received.contacts) || received.contacts.length === 0 || !received.contacts[0]?.profile?.phone) {
+        //   this.logger.warn('No valid contacts found in received data, skipping contact processing');
+        //   return;
+        // }
 
-        if (contactRaw.remoteJid === 'status@broadcast') {
-          return;
-        }
+        // const contactRaw: any = {
+        //   remoteJid: received.contacts[0].profile.phone,
+        //   pushName,
+        //   // profilePicUrl: '',
+        //   instanceId: this.instanceId,
+        // };
 
-        if (contact) {
-          const contactRaw: any = {
-            remoteJid: received.contacts[0].profile.phone,
-            pushName,
-            // profilePicUrl: '',
-            instanceId: this.instanceId,
-          };
+        // if (contactRaw.remoteJid === 'status@broadcast') {
+        //   return;
+        // }
 
-          this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
+        // if (contact) {
+        //   const contactRaw: any = {
+        //     remoteJid: received.contacts[0].profile.phone,
+        //     pushName,
+        //     // profilePicUrl: '',
+        //     instanceId: this.instanceId,
+        //   };
 
-          await this.prismaRepository.contact.updateMany({
-            where: { remoteJid: contact.remoteJid },
-            data: contactRaw,
-          });
-          return;
-        }
+        //   this.sendDataWebhook(Events.CONTACTS_UPDATE, contactRaw);
 
-        this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
+        //   await this.prismaRepository.contact.updateMany({
+        //     where: { remoteJid: contact.remoteJid },
+        //     data: contactRaw,
+        //   });
+        //   return;
+        // }
 
-        this.prismaRepository.contact.create({
-          data: contactRaw,
-        });
+        // this.sendDataWebhook(Events.CONTACTS_UPSERT, contactRaw);
+
+        // this.prismaRepository.contact.create({
+        //   data: contactRaw,
+        // });
       }
-      if (received.statuses) {
+      if (received.statuses && Array.isArray(received.statuses)) {
         for await (const item of received.statuses) {
+          if (!item) continue;
+          
           const key = {
             id: item.id,
             remoteJid: this.phoneNumber,
-            fromMe: this.phoneNumber === received.metadata.phone_number_id,
+            fromMe: this.phoneNumber === received.metadata?.phone_number_id,
           };
           if (settings?.groups_ignore && key.remoteJid.includes('@g.us')) {
             return;
