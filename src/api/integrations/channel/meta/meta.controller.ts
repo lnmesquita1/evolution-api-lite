@@ -33,7 +33,7 @@ export class MetaController extends ChannelController implements ChannelControll
           });
 
           if (!instance) {
-            this.logger.error('WebhookService -> receiveWebhookMeta -> instance not found');
+            this.logger.error('WebhookService -> receiveWebhookMeta -> instance not found: ' + wabaId);
             return;
           }
 
