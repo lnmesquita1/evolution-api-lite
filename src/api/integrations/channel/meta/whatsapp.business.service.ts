@@ -163,7 +163,7 @@ export class BusinessStartupService extends ChannelStartupService {
       if (content.messages && Array.isArray(content.messages) && content.messages.length > 0) {
         fromNumber = content.messages[0].from;
       } else if (content.message_echoes && Array.isArray(content.message_echoes) && content.message_echoes.length > 0) {
-        fromNumber = content.message_echoes[0].from;
+        fromNumber = content.message_echoes[0].to;
       } else if (content.statuses && Array.isArray(content.statuses) && content.statuses.length > 0) {
         fromNumber = content.statuses[0]?.recipient_id;
       }
