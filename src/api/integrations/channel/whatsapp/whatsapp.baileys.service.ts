@@ -4148,10 +4148,17 @@ export class BaileysStartupService extends ChannelStartupService {
     return response;
   }
 
-  public normalizeLidKey(key: proto.IMessageKey): string | undefined {
+  private async normalizeLidKey(key: proto.IMessageKey): Promise<string | undefined> {
     const extendedKey = key as IMessageKeyWithExtras;
-    if (extendedKey.remoteJid?.includes('@lid') && extendedKey.senderPn) {
+    if (this.isLid(extendedKey.remoteJid) && extendedKey.senderPn) {
       this.logger.info("NOVO VALOR JID " + extendedKey.senderPn);
+      const jidKey = this.jidMapKey(extendedKey.senderPn);
+      const existing = await lidMappingCache.get(jidKey);
+      if (!existing) {
+        lidMappingCache.set(jidKey, {
+          data: extendedKey.remoteJid,
+        }, 60 * 60 * 24 * 7); // 1 week in seconds
+      } 
       return extendedKey.senderPn;
     }
     return extendedKey.remoteJid;
