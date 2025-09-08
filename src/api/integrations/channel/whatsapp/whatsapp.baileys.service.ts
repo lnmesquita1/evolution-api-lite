@@ -4155,9 +4155,9 @@ export class BaileysStartupService extends ChannelStartupService {
       const jidKey = this.jidMapKey(extendedKey.senderPn);
       const existing = await lidMappingCache.get(jidKey);
       if (!existing) {
-        lidMappingCache.set(jidKey, {
-          data: extendedKey.remoteJid,
-        }, 60 * 60 * 24 * 7); // 1 week in seconds
+        lidMappingCache.set(jidKey,
+        extendedKey.remoteJid
+        , 60 * 60 * 24 * 7); // 1 week in seconds
       } 
       return extendedKey.senderPn;
     }
