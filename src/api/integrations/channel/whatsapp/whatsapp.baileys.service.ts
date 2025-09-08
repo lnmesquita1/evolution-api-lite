@@ -139,6 +139,7 @@ import { v4 } from 'uuid';
 import { useVoiceCallsBaileys } from './voiceCalls/useVoiceCallsBaileys';
 
 const groupMetadataCache = new CacheService(new CacheEngine(configService, 'groups').getEngine());
+const lidMappingCache = new CacheService(new CacheEngine(configService, 'lidMapping').getEngine());
 const messagesCache = new CacheService(new CacheEngine(configService, 'messages').getEngine());
 
 interface IMessageKeyWithExtras extends proto.IMessageKey {
@@ -847,6 +848,8 @@ export class BaileysStartupService extends ChannelStartupService {
             continue;
           }
 
+          m.key.remoteJid = await this.normalizeLidKey(m.key);
+
           if (Long.isLong(m?.messageTimestamp)) {
             m.messageTimestamp = m.messageTimestamp?.toNumber();
           }
@@ -903,7 +906,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           this.logger.info("VALOR DA MENSAGEM: " + JSON.stringify(received))
 
-          received.key.remoteJid = this.normalizeLidKey(received?.key);
+          received.key.remoteJid = await this.normalizeLidKey(received?.key);
 
           if (received.message?.protocolMessage?.editedMessage || received.message?.editedMessage?.message) {
             const editedMessage =
@@ -1198,6 +1201,8 @@ export class BaileysStartupService extends ChannelStartupService {
         if (settings?.groupsIgnore && key.remoteJid?.includes('@g.us')) {
           continue;
         }
+
+        key.remoteJid = await this.normalizeLidKey(key);
 
         if (key.remoteJid !== 'status@broadcast') {
           // let pollUpdates: any;
@@ -1817,6 +1822,32 @@ export class BaileysStartupService extends ChannelStartupService {
     );
   }
 
+  private jidMapKey(jid: string) {
+    return `${this.instanceId}:${jid}`;
+  }
+
+  private isLid(jid: string | null) {
+    return jid && jid.includes('@lid');
+  }
+
+  private async resolveTargetJid(jidOrNumber: string): Promise<string> {
+    const candidate = jidOrNumber.includes('@')
+      ? jidOrNumber.toLowerCase()
+      : `${jidOrNumber}@s.whatsapp.net`;
+
+    try {
+      const lid = await lidMappingCache.get(this.jidMapKey(candidate));
+      if (this.isLid(lid)) {
+        this.logger.info(`Resolved LID for ${candidate}: ${lid}`);
+        return lid as string;
+      }
+    } catch {
+      // ignore cache errors, fall back to candidate
+    }
+
+    return candidate;
+  }
+
   private async sendMessageWithTyping<T = proto.IMessage>(number: string, message: T, options?: Options) {
     const isWA = (await this.whatsappNumber({ numbers: [number] }))?.shift();
 
@@ -1824,7 +1855,7 @@ export class BaileysStartupService extends ChannelStartupService {
       throw new BadRequestException(isWA);
     }
 
-    const sender = isWA.jid.toLowerCase();
+    const sender = await this.resolveTargetJid(isWA.jid);
 
     this.logger.log(`Sending message to ${sender}`);
 
