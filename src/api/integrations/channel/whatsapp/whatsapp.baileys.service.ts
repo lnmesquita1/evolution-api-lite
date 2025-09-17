@@ -3511,8 +3511,15 @@ export class BaileysStartupService extends ChannelStartupService {
   // Group
   private async updateGroupMetadataCache(groupJid: string) {
     try {
-      const meta = await this.client.groupMetadata(groupJid);
-
+      const fullMeta = await this.client.groupMetadata(groupJid);
+  
+      const meta = {
+        id: fullMeta.id,
+        subject: fullMeta.subject,
+        size: fullMeta.participants.length,
+        participants: fullMeta.participants,
+      };
+  
       const cacheConf = this.configService.get<CacheConf>('CACHE');
 
       if ((cacheConf?.REDIS?.ENABLED && cacheConf?.REDIS?.URI !== '') || cacheConf?.LOCAL?.ENABLED) {
@@ -3654,20 +3661,9 @@ export class BaileysStartupService extends ChannelStartupService {
       return {
         id: group.id,
         subject: group.subject,
-        subjectOwner: group.subjectOwner,
-        subjectTime: group.subjectTime,
         pictureUrl: picture.profilePictureUrl,
         size: group.participants.length,
-        creation: group.creation,
-        owner: group.owner,
-        desc: group.desc,
-        descId: group.descId,
-        restrict: group.restrict,
-        announce: group.announce,
         participants: group.participants,
-        isCommunity: group.isCommunity,
-        isCommunityAnnounce: group.isCommunityAnnounce,
-        linkedParent: group.linkedParent,
       };
     } catch (error) {
       if (reply === 'inner') {
