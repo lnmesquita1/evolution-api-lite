@@ -103,7 +103,9 @@ import makeWASocket, {
   isJidGroup,
   isJidNewsletter,
   isJidStatusBroadcast,
-  isJidUser,
+  isLidUser,
+  isPnUser,
+  jidNormalizedUser,
   makeCacheableSignalKeyStore,
   MessageUpsertType,
   MessageUserReceiptUpdate,
@@ -139,11 +141,10 @@ import { v4 } from 'uuid';
 import { useVoiceCallsBaileys } from './voiceCalls/useVoiceCallsBaileys';
 
 const groupMetadataCache = new CacheService(new CacheEngine(configService, 'groups').getEngine());
-const lidMappingCache = new CacheService(new CacheEngine(configService, 'lidMapping').getEngine());
 const messagesCache = new CacheService(new CacheEngine(configService, 'messages').getEngine());
 
 interface IMessageKeyWithExtras extends proto.IMessageKey {
-  senderPn?: string | null;
+  remoteJidAlt?: string | null;
   senderLid?: string | null;
 }
 
@@ -595,6 +596,8 @@ export class BaileysStartupService extends ChannelStartupService {
 
         return message;
       },
+      enableAutoSessionRecreatiosn: true, // Enable automatic session recreation for failed messages
+      enableRecentMessageCache: true,
     };
 
     this.endSession = false;
@@ -986,7 +989,7 @@ export class BaileysStartupService extends ChannelStartupService {
             return;
           } else if(received.message?.protocolMessage){
             if(!received.message?.protocolMessage?.editedMessage){
-              this.logger.verbose('message rejected');
+              this.logger.verbose('protocolMessage rejected');
               return;
             }
           }
@@ -1690,7 +1693,7 @@ export class BaileysStartupService extends ChannelStartupService {
       m.key = {
         id: id,
         remoteJid: sender,
-        participant: isJidUser(sender) ? sender : undefined,
+        participant: isPnUser(sender) ? sender : undefined,
         fromMe: true,
       };
       for (const [key, value] of Object.entries(m)) {
@@ -1822,24 +1825,18 @@ export class BaileysStartupService extends ChannelStartupService {
     );
   }
 
-  private jidMapKey(jid: string) {
-    return `${this.instanceId}:${jid}`;
-  }
-
-  private isLid(jid: string | null) {
-    return jid && jid.includes('@lid');
-  }
-
   private async resolveTargetJid(jidOrNumber: string): Promise<string> {
     const candidate = jidOrNumber.includes('@')
       ? jidOrNumber.toLowerCase()
       : `${jidOrNumber}@s.whatsapp.net`;
 
     try {
-      const lid = await lidMappingCache.get(this.jidMapKey(candidate));
-      if (this.isLid(lid)) {
-        this.logger.info(`Resolved LID for ${candidate}: ${lid}`);
-        return lid as string;
+      const lidMapping = this.client.signalRepository.lidMapping;
+      const lid = await lidMapping.getLIDForPN(candidate);
+      if (lid && isLidUser(lid)) {
+        const lidReplaced = lid.replace(/:.*?@/, "@");
+        this.logger.info(`Resolved LID for ${candidate}: ${lidReplaced}`);
+        return lidReplaced as string;
       }
     } catch {
       // ignore cache errors, fall back to candidate
@@ -2985,7 +2982,7 @@ export class BaileysStartupService extends ChannelStartupService {
     try {
       const keys: proto.IMessageKey[] = [];
       data.readMessages.forEach((read) => {
-        if (isJidGroup(read.remoteJid) || isJidUser(read.remoteJid)) {
+        if (isJidGroup(read.remoteJid) || isPnUser(read.remoteJid)) {
           keys.push({
             remoteJid: read.remoteJid,
             fromMe: read.fromMe,
@@ -3861,6 +3858,32 @@ export class BaileysStartupService extends ChannelStartupService {
     return quoted;
   }
 
+  private convertLongToNumber(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
+    if (Long.isLong(obj)) {
+      return obj.toNumber();
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.convertLongToNumber(item));
+    }
+
+    if (typeof obj === 'object') {
+      const converted: any = {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          converted[key] = this.convertLongToNumber(obj[key]);
+        }
+      }
+      return converted;
+    }
+
+    return obj;
+  }
+
   private prepareMessage(message: proto.IWebMessageInfo): any {
     const contentType = getContentType(message.message);
     const contentMsg = message?.message[contentType] as any;
@@ -3913,10 +3936,12 @@ export class BaileysStartupService extends ChannelStartupService {
       key: message.key,
       pushName: message.pushName,
       status: status[message.status],
-      message: { ...message.message },
-      contextInfo: contentMsg?.contextInfo,
+      message: this.convertLongToNumber({ ...message.message }),
+      contextInfo: this.convertLongToNumber(contentMsg?.contextInfo),
       messageType: contentType || 'unknown',
-      messageTimestamp: message.messageTimestamp as number,
+      messageTimestamp: Long.isLong(message.messageTimestamp)
+        ? (message.messageTimestamp).toNumber()
+        : (message.messageTimestamp as number),
       instanceId: this.instanceId,
       source: getDevice(message.key.id), 
     };
@@ -4150,17 +4175,21 @@ export class BaileysStartupService extends ChannelStartupService {
 
   private async normalizeLidKey(key: proto.IMessageKey): Promise<string | undefined> {
     const extendedKey = key as IMessageKeyWithExtras;
-    if (this.isLid(extendedKey.remoteJid) && extendedKey.senderPn) {
-      this.logger.info("NOVO VALOR JID " + extendedKey.senderPn);
-      const jidKey = this.jidMapKey(extendedKey.senderPn);
-      const existing = await lidMappingCache.get(jidKey);
-      if (!existing) {
-        lidMappingCache.set(jidKey,
-        extendedKey.remoteJid
-        , 60 * 60 * 24 * 7); // 1 week in seconds
-      } 
-      return extendedKey.senderPn;
+    const jid = extendedKey.remoteJid ?? extendedKey.remoteJidAlt ?? "";
+    if (isLidUser(jid)) {
+      const lidMapping = this.client.signalRepository.lidMapping;
+      const pn = await lidMapping.getPNForLID(jid);
+      if (pn) {
+        const pnSantized = pn.replace(/:.*?@/, "@");
+        this.logger.info("NOVO VALOR JID: " + pnSantized);
+        return pnSantized;
+      }
+      this.logger.warn("NÃO FOI POSSÍVEL NORMALIZAR LID: " + jid);
+      return jid;
     }
-    return extendedKey.remoteJid;
+    if (!jid) {
+      this.logger.warn("JID NÃO EXISTE: " + JSON.stringify(key));
+    }
+    return jid;
   }
 }
