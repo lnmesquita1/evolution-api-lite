@@ -100,6 +100,7 @@ import makeWASocket, {
   getContentType,
   getDevice,
   GroupMetadata,
+  GroupParticipant,
   isJidGroup,
   isJidNewsletter,
   isJidStatusBroadcast,
@@ -117,6 +118,7 @@ import makeWASocket, {
   WABrowserDescription,
   WAMediaUpload,
   WAMessage,
+  WAMessageKey,
   WAMessageUpdate,
   WAPresence,
   WASocket,
@@ -851,8 +853,6 @@ export class BaileysStartupService extends ChannelStartupService {
             continue;
           }
 
-          m.key.remoteJid = await this.normalizeLidKey(m.key);
-
           if (Long.isLong(m?.messageTimestamp)) {
             m.messageTimestamp = m.messageTimestamp?.toNumber();
           }
@@ -907,9 +907,7 @@ export class BaileysStartupService extends ChannelStartupService {
           //   }
           // }
 
-          this.logger.info("VALOR DA MENSAGEM: " + JSON.stringify(received))
-
-          received.key.remoteJid = await this.normalizeLidKey(received?.key);
+          this.logger.info("VALOR DA MENSAGEM: " + JSON.stringify(received));
 
           if (received.message?.protocolMessage?.editedMessage || received.message?.editedMessage?.message) {
             const editedMessage =
@@ -1205,8 +1203,6 @@ export class BaileysStartupService extends ChannelStartupService {
           continue;
         }
 
-        key.remoteJid = await this.normalizeLidKey(key);
-
         if (key.remoteJid !== 'status@broadcast') {
           // let pollUpdates: any;
 
@@ -1338,8 +1334,10 @@ export class BaileysStartupService extends ChannelStartupService {
 
     'group-participants.update': (participantsUpdate: {
       id: string;
-      participants: string[];
+      participants: GroupParticipant[];
       action: ParticipantAction;
+      author: string;
+      authorPn?: string;
     }) => {
       this.sendDataWebhook(Events.GROUP_PARTICIPANTS_UPDATE, participantsUpdate);
 
@@ -1825,26 +1823,6 @@ export class BaileysStartupService extends ChannelStartupService {
     );
   }
 
-  private async resolveTargetJid(jidOrNumber: string): Promise<string> {
-    const candidate = jidOrNumber.includes('@')
-      ? jidOrNumber.toLowerCase()
-      : `${jidOrNumber}@s.whatsapp.net`;
-
-    try {
-      const lidMapping = this.client.signalRepository.lidMapping;
-      const lid = await lidMapping.getLIDForPN(candidate);
-      if (lid && isLidUser(lid)) {
-        const lidReplaced = lid.replace(/:.*?@/, "@");
-        this.logger.info(`Resolved LID for ${candidate}: ${lidReplaced}`);
-        return lidReplaced as string;
-      }
-    } catch {
-      // ignore cache errors, fall back to candidate
-    }
-
-    return candidate;
-  }
-
   private async sendMessageWithTyping<T = proto.IMessage>(number: string, message: T, options?: Options) {
     const isWA = (await this.whatsappNumber({ numbers: [number] }))?.shift();
 
@@ -1852,7 +1830,7 @@ export class BaileysStartupService extends ChannelStartupService {
       throw new BadRequestException(isWA);
     }
 
-    const sender = await this.resolveTargetJid(isWA.jid);
+    const sender = isWA.jid.toLowerCase();
 
     this.logger.log(`Sending message to ${sender}`);
 
@@ -1902,7 +1880,7 @@ export class BaileysStartupService extends ChannelStartupService {
         const msg = m?.message ? m : ((await this.getMessage(m.key, true)) as proto.IWebMessageInfo);
 
         if (msg) {
-          quoted = msg;
+          quoted = msg as WAMessage;
         }
       }
 
@@ -2933,11 +2911,8 @@ export class BaileysStartupService extends ChannelStartupService {
           }
 
           const numberJid = numberVerified?.jid || user.jid;
-          const lid =
-            typeof numberVerified?.lid === 'string'
-              ? numberVerified.lid
-              : numberJid.includes('@lid')
-                ? numberJid.split('@')[1]
+          const lid = numberJid.includes('@lid')
+                ? numberJid.split('@')[0]
                 : undefined;
           return new OnWhatsAppDto(
             numberJid,
@@ -4090,8 +4065,8 @@ export class BaileysStartupService extends ChannelStartupService {
     return response;
   }
 
-  public async baileysAssertSessions(jids: string[], force: boolean) {
-    const response = await this.client.assertSessions(jids, force);
+  public async baileysAssertSessions(jids: string[]) {
+    const response = await this.client.assertSessions(jids);
 
     return response;
   }
@@ -4134,7 +4109,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async baileysDownloadMediaMessage(message: proto.IWebMessageInfo) {
     const stream = await downloadMediaMessage(
-      message,
+      message as WAMessage,
       'stream',
       {},
       {
@@ -4173,23 +4148,4 @@ export class BaileysStartupService extends ChannelStartupService {
     return response;
   }
 
-  private async normalizeLidKey(key: proto.IMessageKey): Promise<string | undefined> {
-    const extendedKey = key as IMessageKeyWithExtras;
-    const jid = extendedKey.remoteJid ?? extendedKey.remoteJidAlt ?? "";
-    if (isLidUser(jid)) {
-      const lidMapping = this.client.signalRepository.lidMapping;
-      const pn = await lidMapping.getPNForLID(jid);
-      if (pn) {
-        const pnSantized = pn.replace(/:.*?@/, "@");
-        this.logger.info("NOVO VALOR JID: " + pnSantized);
-        return pnSantized;
-      }
-      this.logger.warn("NÃO FOI POSSÍVEL NORMALIZAR LID: " + jid);
-      return jid;
-    }
-    if (!jid) {
-      this.logger.warn("JID NÃO EXISTE: " + JSON.stringify(key));
-    }
-    return jid;
-  }
 }
