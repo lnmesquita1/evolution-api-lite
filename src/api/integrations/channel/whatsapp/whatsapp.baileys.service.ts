@@ -3912,6 +3912,7 @@ export class BaileysStartupService extends ChannelStartupService {
       pushName: message.pushName,
       status: status[message.status],
       message: this.convertLongToNumber({ ...message.message }),
+      participant: message.participant,
       contextInfo: this.convertLongToNumber(contentMsg?.contextInfo),
       messageType: contentType || 'unknown',
       messageTimestamp: Long.isLong(message.messageTimestamp)
