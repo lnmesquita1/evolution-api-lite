@@ -156,8 +156,6 @@ export class BusinessStartupService extends ChannelStartupService {
         return;
       }
 
-      this.eventHandler(content);
-
       // Add validation for phoneNumber extraction
       let fromNumber: string | undefined;
       if (content.messages && Array.isArray(content.messages) && content.messages.length > 0) {
@@ -173,6 +171,9 @@ export class BusinessStartupService extends ChannelStartupService {
       } else {
         this.logger.warn('Could not extract phone number from webhook data: ' + JSON.stringify(content));
       }
+
+      this.eventHandler(content);
+
     } catch (error) {
       this.logger.error(error);
       throw new InternalServerErrorException(error?.toString());
