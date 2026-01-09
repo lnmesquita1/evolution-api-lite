@@ -145,6 +145,10 @@ export class BusinessStartupService extends ChannelStartupService {
         return;
       }
 
+      if (change.field === 'calls') {
+        this.sendDataWebhook(Events.CALL, { callNotification: data });
+      }
+
       if (change.value?.event === 'PARTNER_APP_UNINSTALLED') {
         this.sendDataWebhook(Events.WABA_ACCOUNT_STATUS, { appUninstalled: true });
         return;
@@ -748,6 +752,8 @@ export class BusinessStartupService extends ChannelStartupService {
       const linkPreview = options?.linkPreview != false ? undefined : false;
       if (options?.quoted) {
         let m = options.quoted;
+
+        console.log("NUMERO DE LID DA META: " + number);
 
         if (typeof m === 'string') {
           try {
